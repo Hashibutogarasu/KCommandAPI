@@ -260,4 +260,17 @@ tasks.register('syncVersionWithGit') {
 
 tasks.named('build') {
     dependsOn 'syncVersionWithGit'
+    finalizedBy 'incrementBuildNumber'
+}
+
+tasks.register('incrementBuildNumber') {
+    group = 'build'
+    description = 'Increment build number after successful build'
+    
+    doLast {
+        def currentBuildNumber = buildProps.getProperty('buildNumber').toInteger()
+        buildProps.setProperty('buildNumber', (currentBuildNumber + 1).toString())
+        buildNumberFile.withOutputStream { buildProps.store(it, null) }
+        println "Build number incremented to: ${currentBuildNumber + 1}"
+    }
 }
