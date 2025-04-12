@@ -23,7 +23,7 @@ public class BaseCommand implements CommandExecutor, TabCompleter {
      * サブコマンドを登録する
      * 
      * @param subCommandPath サブコマンドのパス
-     * @param executor コマンド実行時のハンドラ
+     * @param executor       コマンド実行時のハンドラ
      */
     public static void registerSubCommand(List<String> subCommandPath, CommandExecutor executor) {
         subCommands.put(subCommandPath, executor);
@@ -48,7 +48,7 @@ public class BaseCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
-        
+
         if (args.length == 1) {
             for (List<String> path : subCommands.keySet()) {
                 if (path.get(0).startsWith(args[0])) {
