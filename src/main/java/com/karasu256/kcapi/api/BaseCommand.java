@@ -20,10 +20,23 @@ public class BaseCommand implements CommandExecutor, TabCompleter {
     private final Map<String, SubCommand> subCommands = new HashMap<>();
     private static final String DEFAULT_COMMAND = "help";
 
+    /**
+     * サブコマンドを登録します
+     * @param name サブコマンドの名前
+     * @param subCommand サブコマンド
+     */
     public void registerSubCommand(String name, SubCommand subCommand) {
         subCommands.put(name.toLowerCase(), subCommand);
     }
 
+    /**
+     * このコマンドが実行されたとき、サブコマンドを探索し、そのサブコマンドを実行します。
+     * @param sender コマンド送信者
+     * @param command コマンド
+     * @param label コマンドのラベル
+     * @param args コマンド引数
+     * @return コマンドが正常に実行されたかを返します
+     */
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         String subCommandName = (args.length > 0) ? args[0].toLowerCase() : DEFAULT_COMMAND;
@@ -40,6 +53,14 @@ public class BaseCommand implements CommandExecutor, TabCompleter {
         return subCommands.get(subCommandName).execute(sender, subArgs);
     }
 
+    /**
+     * サブコマンドのタブ補完機能を実装します
+     * @param sender コマンド送信者
+     * @param command コマンド
+     * @param alias コマンドエイリアス
+     * @param args コマンド引数
+     * @return コマンドの候補リスト
+     */
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
@@ -58,6 +79,10 @@ public class BaseCommand implements CommandExecutor, TabCompleter {
         return new ArrayList<>();
     }
 
+    /**
+     * サブコマンドのマップを取得します
+     * @return サブコマンドのマップ
+     */
     public Map<String, SubCommand> getSubCommands() {
         return subCommands;
     }

@@ -13,16 +13,33 @@ import com.karasu256.kcapi.api.BaseCommand;
 public final class KarasuCommandAPI extends JavaPlugin {
     private static KarasuCommandAPI instance;
 
+    /**
+     * プラグインが有効化された時に呼ばれる関数です。
+     * 
+     * @author Hashibutogarasu
+     */
     @Override
     public void onEnable() {
         instance = this;
     }
 
+    /**
+     * このプラグインが無効化された時に実行される関数です。
+     * メモリの開放などを行います。
+     * 
+     * @author Hashibutogarasu
+     */
     @Override
     public void onDisable() {
         instance = null;
     }
 
+    /**
+     * このプラグインをインスタンスとして取得します
+     * 
+     * @return プラグインのインスタンス
+     * @author Hashibutogarasu
+     */
     public static KarasuCommandAPI getInstance() {
         return instance;
     }
@@ -32,6 +49,8 @@ public final class KarasuCommandAPI extends JavaPlugin {
      * 
      * @param commandName plugin.ymlに登録されているコマンド名
      * @return 作成されたBaseCommandインスタンス
+     * 
+     * @author Hashibutogarasu
      */
     public BaseCommand registerCommand(String commandName) {
         BaseCommand baseCommand = new BaseCommand();
