@@ -1,10 +1,67 @@
 plugins {
     id 'java'
     id("xyz.jpenilla.run-paper") version "2.3.1"
+    id 'maven-publish'
+    id 'signing'
 }
 
 group = 'com.karasu256'
-version = '0.1'
+
+def versionFile = file('version.properties')
+def versionProps = new Properties()
+
+def initializeWithGitVersion() {
+    def gitVersion = fetchLatestGitVersion()
+    versionProps.setProperty('major', gitVersion[0].toString())
+    versionProps.setProperty('minor', gitVersion[1].toString())
+    versionProps.setProperty('patch', gitVersion[2].toString())
+    println "Initialized version from Git: ${gitVersion[0]}.${gitVersion[1]}.${gitVersion[2]}"
+    return gitVersion
+}
+
+if (versionFile.exists()) {
+    versionFile.withInputStream { versionProps.load(it) }
+} else {
+    def gitVersion = initializeWithGitVersion()
+    versionFile.createNewFile()
+    versionFile.withOutputStream { versionProps.store(it, "Version properties for ${project.name}") }
+}
+
+def buildNumberFile = file('build-number.properties')
+def buildProps = new Properties()
+
+if (buildNumberFile.exists()) {
+    buildNumberFile.withInputStream { buildProps.load(it) }
+} else {
+    buildProps.setProperty('buildNumber', '0')
+    buildNumberFile.createNewFile()
+}
+
+def majorVersion = versionProps.getProperty('major').toInteger()
+def minorVersion = versionProps.getProperty('minor').toInteger()
+def patchVersion = versionProps.getProperty('patch').toInteger()
+def buildNumber = buildProps.getProperty('buildNumber').toInteger()
+
+version = "${majorVersion}.${minorVersion}.${patchVersion}-build.${buildNumber}"
+
+def fetchLatestGitVersion() {
+    def latestVersion = [0, 1, 0]
+    try {
+        def process = "git ls-remote --tags https://github.com/Hashibutogarasu/KCommandAPI.git".execute()
+        def tags = process.text.readLines()
+            .collect { it.split()[1].replaceAll("refs/tags/v", "") }
+            .findAll { it =~ /^\d+\.\d+\.\d+$/ }
+        
+        if (tags) {
+            def latest = tags.last()
+            latestVersion = latest.tokenize('.').collect { it.toInteger() }
+            println "Found latest version tag: v${latest}"
+        }
+    } catch (Exception e) {
+        println "Warning: Failed to fetch version from Git: ${e.message}"
+    }
+    return latestVersion
+}
 
 repositories {
     mavenCentral()
@@ -56,4 +113,92 @@ processResources {
     filesMatching('plugin.yml') {
         expand props
     }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Hashibutogarasu/KCommandAPI")
+            credentials {
+                username = findProperty('gpr.user') ?: System.getenv("GITHUB_ACTOR")
+                password = findProperty('gpr.key') ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+    
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifactId = 'kcommandapi'
+            
+            pom {
+                name = 'KCommandAPI'
+                description = 'A Minecraft plugin that provides command API'
+                url = 'https://github.com/Hashibutogarasu/KCommandAPI'
+                
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                
+                developers {
+                    developer {
+                        id = 'hashibutogarasu'
+                        name = 'Hashibutogarasu'
+                        email = 'karasu@karasu256.com'
+                    }
+                }
+                
+                scm {
+                    connection = 'scm:git:git://github.com/Hashibutogarasu/KCommandAPI.git'
+                    developerConnection = 'scm:git:ssh://github.com/Hashibutogarasu/KCommandAPI.git'
+                    url = 'https://github.com/Hashibutogarasu/KCommandAPI'
+                }
+            }
+        }
+    }
+}
+
+signing {
+    def signingKey = findProperty('signingKey') ?: System.getenv('GPG_SIGNING_KEY')
+    def signingPassword = findProperty('signingPassword') ?: System.getenv('GPG_SIGNING_PASSWORD')
+    def hasSigningKeys = signingKey && signingPassword
+    
+    required = !project.hasProperty('skipSigning') && hasSigningKeys
+    
+    if (hasSigningKeys) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    } else if (required) {
+        useGpgCmd()
+    }
+    
+    sign publishing.publications.mavenJava
+}
+
+jar {
+    archiveBaseName.set('KCommandAPI')
+    from sourceSets.main.output
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+tasks.register('buildJar', Jar) {
+    archiveBaseName.set('KCommandAPI')
+    from sourceSets.main.output
+    dependsOn configurations.compileClasspath
+}
+
+tasks.named('generateMetadataFileForMavenJavaPublication') {
+    dependsOn 'buildJar'
+}
+
+tasks.register('copyJar', Copy) {
+    from buildJar
+    into 'run/plugins'
 }
