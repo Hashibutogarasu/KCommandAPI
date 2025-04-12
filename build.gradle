@@ -279,7 +279,8 @@ tasks.register('packageForMavenCentral', Zip) {
     group = 'publishing'
     description = 'Creates a ZIP file containing all artifacts for Maven Central publication'
     
-    dependsOn jar, javadocJar, sourcesJar, publishToMavenLocal
+    // 依存関係の順序を修正
+    dependsOn jar, javadocJar, sourcesJar, 'generatePomFileForMavenJavaPublication'
     
     doFirst {
         def distributionsDir = file("${buildDir}/distributions")
@@ -289,8 +290,19 @@ tasks.register('packageForMavenCentral', Zip) {
         }
     }
     
-    from layout.buildDirectory.dir('publications/mavenJava')
-    include '*.pom', '*.jar', '*.asc'
+    // ファイル取得元を修正
+    from(jar) {
+        rename { "kcommandapi-${project.version}.jar" }
+    }
+    from(sourcesJar) {
+        rename { "kcommandapi-${project.version}-sources.jar" }
+    }
+    from(javadocJar) {
+        rename { "kcommandapi-${project.version}-javadoc.jar" }
+    }
+    from(tasks.named('generatePomFileForMavenJavaPublication')) {
+        rename { "kcommandapi-${project.version}.pom" }
+    }
     
     archiveBaseName.set('maven-central-package')
     archiveClassifier.set('bundle')
