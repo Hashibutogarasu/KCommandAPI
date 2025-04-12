@@ -2,7 +2,6 @@ plugins {
     id 'java'
     id 'maven-publish'
     id 'signing'
-    id("io.gitee.pkmer.pkmerboot-central-publisher") version "1.1.1"
 }
 
 group = 'com.karasu256'
@@ -126,14 +125,6 @@ processResources {
     }
 }
 
-pkmerBoot {
-    sonatypeMavenCentral{
-        stagingRepository = layout.buildDirectory.dir("repos/bundles")
-        username = findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER")
-        password = findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
-    }
-}
-
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -187,14 +178,14 @@ publishing {
             }
         }
         
-        if (version.toString().endsWith("-SNAPSHOT")) {
-            maven {
-                name = "MavenCentralSnapshots"
-                url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
-                credentials {
-                    username = findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER")
-                    password = findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
-                }
+        maven {
+            name = "OSSRH"
+            url = version.toString().endsWith("-SNAPSHOT") 
+                ? "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+                : "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            credentials {
+                username = findProperty("ossrh.user") ?: System.getenv("OSSRH_USERNAME")
+                password = findProperty("ossrh.password") ?: System.getenv("OSSRH_PASSWORD")
             }
         }
     }
