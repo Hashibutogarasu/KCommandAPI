@@ -3,6 +3,7 @@ plugins {
     id("xyz.jpenilla.run-paper") version "2.3.1"
     id 'maven-publish'
     id 'signing'
+    id 'org.danilopianini.publish-on-central' version '8.0.6'
 }
 
 group = 'com.karasu256'
@@ -113,6 +114,8 @@ java {
     if (JavaVersion.current() < javaVersion) {
         toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     }
+    withJavadocJar()
+    withSourcesJar()
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -132,18 +135,12 @@ processResources {
     }
 }
 
+publishOnCentral {
+    repoOwner = 'Hashibutogarasu'
+    projectDescription = 'A Minecraft plugin that provides command API'
+}
+
 publishing {
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/Hashibutogarasu/KCommandAPI")
-            credentials {
-                username = findProperty('gpr.user') ?: System.getenv("GITHUB_ACTOR")
-                password = findProperty('gpr.key') ?: System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
-    
     publications {
         mavenJava(MavenPublication) {
             from components.java
@@ -166,6 +163,7 @@ publishing {
                         id = 'hashibutogarasu'
                         name = 'Hashibutogarasu'
                         email = 'karasu@karasu256.com'
+                        url = 'https://github.com/Hashibutogarasu'
                     }
                 }
                 
@@ -177,36 +175,36 @@ publishing {
             }
         }
     }
+    
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Hashibutogarasu/KCommandAPI")
+            credentials {
+                username = findProperty('gpr.user') ?: System.getenv("GITHUB_ACTOR")
+                password = findProperty('gpr.key') ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
 }
 
 signing {
-    def keyId = findProperty('signing.gnupg.keyName')
-    def passphrase = findProperty('signing.gnupg.passphrase')
-    def hasGpgKeys = keyId && passphrase
+    def signingKeyId = findProperty("signing.keyId")
+    def signingPassword = findProperty("signing.password")
+    def signingSecretKeyRingFile = findProperty("signing.secretKeyRingFile")
     
-    required = !project.hasProperty('skipSigning')
+    required { gradle.taskGraph.hasTask("publish") }
     
-    if (hasGpgKeys) {
-        useGpgCmd()
-        gnupg {
-            keyName = keyId
-            passphrase = passphrase
-        }
+    if (signingKeyId && signingPassword && signingSecretKeyRingFile) {
+        def keyFile = new File(signingSecretKeyRingFile.toString().replaceAll('"', ''))
+        useInMemoryPgpKeys(signingKeyId, keyFile.text, signingPassword)
     } else {
-        println "GPG signing keys not found - signing will be skipped"
+        println "署名情報が不完全です - 署名はスキップされます"
     }
-    
-    sign publishing.publications.mavenJava
 }
 
-jar {
-    archiveBaseName.set('KCommandAPI')
-    from sourceSets.main.output
-}
-
-java {
-    withJavadocJar()
-    withSourcesJar()
+tasks.withType(PublishToMavenRepository) {
+    mustRunAfter tasks.withType(Sign)
 }
 
 tasks.register('buildJar', Jar) {
@@ -215,13 +213,21 @@ tasks.register('buildJar', Jar) {
     dependsOn configurations.compileClasspath
 }
 
-tasks.named('generateMetadataFileForMavenJavaPublication') {
-    dependsOn 'buildJar'
+tasks.named('build') {
+    dependsOn 'sourcesJar', 'javadocJar', 'syncVersionWithGit'
+    finalizedBy 'signMavenJavaPublication', 'incrementBuildNumber'
 }
 
-tasks.register('copyJar', Copy) {
-    from buildJar
-    into 'run/plugins'
+tasks.register('incrementBuildNumber') {
+    group = 'build'
+    description = 'Increment build number after successful build'
+    
+    doLast {
+        def currentBuildNumber = buildProps.getProperty('buildNumber').toInteger()
+        buildProps.setProperty('buildNumber', (currentBuildNumber + 1).toString())
+        buildNumberFile.withOutputStream { buildProps.store(it, null) }
+        println "Build number incremented to: ${currentBuildNumber + 1}"
+    }
 }
 
 tasks.register('updatePluginVersion') {
@@ -263,105 +269,6 @@ tasks.register('syncVersionWithGit') {
 }
 
 tasks.named('build') {
-    dependsOn 'syncVersionWithGit'
-    finalizedBy 'signMavenJavaPublication', 'incrementBuildNumber', 'packageForMavenCentral'
-}
-
-tasks.register('incrementBuildNumber') {
-    group = 'build'
-    description = 'Increment build number after successful build'
-    
-    doLast {
-        def currentBuildNumber = buildProps.getProperty('buildNumber').toInteger()
-        buildProps.setProperty('buildNumber', (currentBuildNumber + 1).toString())
-        buildNumberFile.withOutputStream { buildProps.store(it, null) }
-        println "Build number incremented to: ${currentBuildNumber + 1}"
-    }
-}
-
-tasks.register('packageForMavenCentral', Zip) {
-    group = 'publishing'
-    description = 'Creates a ZIP file containing all artifacts for Maven Central publication'
-    
-    dependsOn jar, javadocJar, sourcesJar, 'generatePomFileForMavenJavaPublication', 'signMavenJavaPublication'
-    mustRunAfter 'signMavenJavaPublication'
-    
-    doFirst {
-        // 署名タスクが完了したことを確認
-        def signTask = tasks.findByName('signMavenJavaPublication')
-        if (signTask && !signTask.didWork) {
-            throw new GradleException('Signing task did not complete successfully')
-        }
-        
-        def distributionsDir = file("${buildDir}/distributions")
-        if (!distributionsDir.exists()) {
-            distributionsDir.mkdirs()
-        }
-        
-        // 一時的なステージングディレクトリを作成
-        def stagingDir = file("${buildDir}/staging")
-        if (stagingDir.exists()) {
-            stagingDir.deleteDir()
-        }
-        stagingDir.mkdirs()
-        
-        // アーティファクトをステージングディレクトリにコピー
-        copy {
-            from(jar.archiveFile) {
-                rename { "kcommandapi-${project.version}.jar" }
-            }
-            from(sourcesJar.archiveFile) {
-                rename { "kcommandapi-${project.version}-sources.jar" }
-            }
-            from(javadocJar.archiveFile) {
-                rename { "kcommandapi-${project.version}-javadoc.jar" }
-            }
-            from(tasks.named('generatePomFileForMavenJavaPublication').get().outputs.files) {
-                rename { "kcommandapi-${project.version}.pom" }
-            }
-            into stagingDir
-        }
-        
-        // 各ファイルのMD5とSHA1チェックサムを生成
-        stagingDir.listFiles().each { file ->
-            if (file.isFile()) {
-                // MD5チェックサム
-                ant.checksum(file: file, algorithm: 'MD5', fileext: '.md5')
-                // SHA1チェックサム
-                ant.checksum(file: file, algorithm: 'SHA1', fileext: '.sha1')
-            }
-        }
-        
-        // 署名されたファイルをコピー
-        copy {
-            from(buildDir) {
-                include '**/kcommandapi-*.asc'
-            }
-            into stagingDir
-        }
-    }
-    
-    from(file("${buildDir}/staging"))
-    
-    archiveBaseName.set('maven-central-package')
-    archiveClassifier.set('bundle')
-    destinationDirectory = file("${buildDir}/distributions")
-    
-    doLast {
-        // 一時的なステージングディレクトリを削除
-        delete file("${buildDir}/staging")
-        println "Maven Central bundle created at: ${archiveFile.get().asFile.absolutePath}"
-    }
-}
-
-tasks.register('prepareMavenCentralRelease') {
-    group = 'publishing'
-    description = 'Prepares all necessary artifacts for Maven Central release'
-    
-    dependsOn clean, packageForMavenCentral
-    
-    doLast {
-        println "Release package prepared for Maven Central"
-        println "Please check the bundle at: ${tasks.packageForMavenCentral.archiveFile.get().asFile.absolutePath}"
-    }
+    dependsOn 'sourcesJar', 'javadocJar', 'syncVersionWithGit'
+    finalizedBy 'signMavenJavaPublication', 'incrementBuildNumber'
 }
