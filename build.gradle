@@ -188,8 +188,7 @@ signing {
     
     if (hasGpgKeys) {
         useGpgCmd()
-        
-        gpg {
+        gnupg {
             keyName = keyId
             passphrase = passphrase
         }
