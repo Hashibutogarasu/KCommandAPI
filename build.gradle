@@ -148,6 +148,9 @@ publishing {
             from components.java
             artifactId = 'kcommandapi'
             
+            // Maven Centralへのパブリッシュ時はビルド番号を除外
+            version = project.version.toString().replace("-build.${buildNumber}", "")
+            
             pom {
                 name = 'KCommandAPI'
                 description = 'A Minecraft plugin that provides command API'
