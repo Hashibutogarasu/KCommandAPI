@@ -180,16 +180,20 @@ publishing {
 }
 
 signing {
-    def signingKey = findProperty('signingKey') ?: System.getenv('GPG_SIGNING_KEY')
-    def signingPassword = findProperty('signingPassword') ?: System.getenv('GPG_SIGNING_PASSWORD')
-    def hasSigningKeys = signingKey && signingPassword
+    def keyId = findProperty('signing.gnupg.keyName')
+    def passphrase = findProperty('signing.gnupg.passphrase')
+    def hasGpgKeys = keyId && passphrase
     
-    required = !project.hasProperty('skipSigning') && hasSigningKeys
+    required = !project.hasProperty('skipSigning')
     
-    if (hasSigningKeys) {
-        useInMemoryPgpKeys(signingKey, signingPassword)
-    } else if (required) {
-        useGpgCmd()
+    if (hasGpgKeys) {
+        useGpg()
+        gpg {
+            keyName = keyId
+            passphrase = passphrase
+        }
+    } else {
+        println "GPG signing keys not found - signing will be skipped"
     }
     
     sign publishing.publications.mavenJava
@@ -260,7 +264,7 @@ tasks.register('syncVersionWithGit') {
 
 tasks.named('build') {
     dependsOn 'syncVersionWithGit'
-    finalizedBy 'incrementBuildNumber', 'packageForMavenCentral'
+    finalizedBy 'signMavenJavaPublication', 'incrementBuildNumber', 'packageForMavenCentral'
 }
 
 tasks.register('incrementBuildNumber') {
@@ -280,8 +284,15 @@ tasks.register('packageForMavenCentral', Zip) {
     description = 'Creates a ZIP file containing all artifacts for Maven Central publication'
     
     dependsOn jar, javadocJar, sourcesJar, 'generatePomFileForMavenJavaPublication', 'signMavenJavaPublication'
+    mustRunAfter 'signMavenJavaPublication'
     
     doFirst {
+        // 署名タスクが完了したことを確認
+        def signTask = tasks.findByName('signMavenJavaPublication')
+        if (signTask && !signTask.didWork) {
+            throw new GradleException('Signing task did not complete successfully')
+        }
+        
         def distributionsDir = file("${buildDir}/distributions")
         if (!distributionsDir.exists()) {
             distributionsDir.mkdirs()
