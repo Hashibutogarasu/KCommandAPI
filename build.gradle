@@ -279,34 +279,66 @@ tasks.register('packageForMavenCentral', Zip) {
     group = 'publishing'
     description = 'Creates a ZIP file containing all artifacts for Maven Central publication'
     
-    dependsOn jar, javadocJar, sourcesJar, 'generatePomFileForMavenJavaPublication'
+    dependsOn jar, javadocJar, sourcesJar, 'generatePomFileForMavenJavaPublication', 'signMavenJavaPublication'
     
     doFirst {
         def distributionsDir = file("${buildDir}/distributions")
         if (!distributionsDir.exists()) {
             distributionsDir.mkdirs()
-            println "Created distributions directory at: ${distributionsDir.absolutePath}"
+        }
+        
+        // 一時的なステージングディレクトリを作成
+        def stagingDir = file("${buildDir}/staging")
+        if (stagingDir.exists()) {
+            stagingDir.deleteDir()
+        }
+        stagingDir.mkdirs()
+        
+        // アーティファクトをステージングディレクトリにコピー
+        copy {
+            from(jar.archiveFile) {
+                rename { "kcommandapi-${project.version}.jar" }
+            }
+            from(sourcesJar.archiveFile) {
+                rename { "kcommandapi-${project.version}-sources.jar" }
+            }
+            from(javadocJar.archiveFile) {
+                rename { "kcommandapi-${project.version}-javadoc.jar" }
+            }
+            from(tasks.named('generatePomFileForMavenJavaPublication').get().outputs.files) {
+                rename { "kcommandapi-${project.version}.pom" }
+            }
+            into stagingDir
+        }
+        
+        // 各ファイルのMD5とSHA1チェックサムを生成
+        stagingDir.listFiles().each { file ->
+            if (file.isFile()) {
+                // MD5チェックサム
+                ant.checksum(file: file, algorithm: 'MD5', fileext: '.md5')
+                // SHA1チェックサム
+                ant.checksum(file: file, algorithm: 'SHA1', fileext: '.sha1')
+            }
+        }
+        
+        // 署名されたファイルをコピー
+        copy {
+            from(buildDir) {
+                include '**/kcommandapi-*.asc'
+            }
+            into stagingDir
         }
     }
     
-    from(jar) {
-        rename { "kcommandapi-${project.version}.jar" }
-    }
-    from(sourcesJar) {
-        rename { "kcommandapi-${project.version}-sources.jar" }
-    }
-    from(javadocJar) {
-        rename { "kcommandapi-${project.version}-javadoc.jar" }
-    }
-    from(tasks.named('generatePomFileForMavenJavaPublication')) {
-        rename { "kcommandapi-${project.version}.pom" }
-    }
+    from(file("${buildDir}/staging"))
     
     archiveBaseName.set('maven-central-package')
     archiveClassifier.set('bundle')
     destinationDirectory = file("${buildDir}/distributions")
     
     doLast {
+        // 一時的なステージングディレクトリを削除
+        delete file("${buildDir}/staging")
         println "Maven Central bundle created at: ${archiveFile.get().asFile.absolutePath}"
     }
 }
