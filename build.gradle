@@ -1,6 +1,5 @@
 plugins {
     id 'java'
-    id("xyz.jpenilla.run-paper") version "2.3.1"
     id 'maven-publish'
     id 'signing'
     id 'org.danilopianini.publish-on-central' version '8.0.6'
@@ -97,15 +96,6 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.3-R0.1-SNAPSHOT")
 }
 
-tasks {
-    runServer {
-        // Configure the Minecraft version for our task.
-        // This is the only required configuration besides applying the plugin.
-        // Your plugin's jar (or shadowJar if present) will be used automatically.
-        minecraftVersion("1.21")
-    }
-}
-
 def targetJavaVersion = 21
 java {
     def javaVersion = JavaVersion.toVersion(targetJavaVersion)
@@ -184,26 +174,43 @@ publishing {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/Hashibutogarasu/KCommandAPI")
             credentials {
-                username = findProperty('gpr.user') ?: System.getenv("GITHUB_ACTOR")
-                password = findProperty('gpr.key') ?: System.getenv("GITHUB_TOKEN")
+                username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
+                password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+        
+        if (version.toString().endsWith("-SNAPSHOT")) {
+            maven {
+                name = "MavenCentralSnapshots"
+                url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
+                credentials {
+                    username = findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER")
+                    password = findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
+                }
             }
         }
     }
 }
 
 signing {
-    def signingKeyId = findProperty("signing.keyId")
+    def signingKey = findProperty("signing.key")
     def signingPassword = findProperty("signing.password")
-    def signingSecretKeyRingFile = findProperty("signing.secretKeyRingFile")
+    
+    if (signingKey && signingPassword) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    } else {
+        def signingKeyId = findProperty("signing.keyId")
+        def signingSecretKeyRingFile = findProperty("signing.secretKeyRingFile")
+        
+        if (signingKeyId && signingPassword && signingSecretKeyRingFile) {
+            def keyFile = new File(signingSecretKeyRingFile.toString().replaceAll('"', ''))
+            useInMemoryPgpKeys(signingKeyId, keyFile.text, signingPassword)
+        } else {
+            println "署名情報が不完全です - 署名はスキップされます"
+        }
+    }
     
     required { gradle.taskGraph.hasTask("publish") }
-    
-    if (signingKeyId && signingPassword && signingSecretKeyRingFile) {
-        def keyFile = new File(signingSecretKeyRingFile.toString().replaceAll('"', ''))
-        useInMemoryPgpKeys(signingKeyId, keyFile.text, signingPassword)
-    } else {
-        println "署名情報が不完全です - 署名はスキップされます"
-    }
 }
 
 tasks.withType(PublishToMavenRepository) {
