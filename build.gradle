@@ -43,7 +43,7 @@ def patchVersion = versionProps.getProperty('patch').toInteger()
 def buildNumber = buildProps.getProperty('buildNumber').toInteger()
 
 // バージョン形式の変更
-version = "kcommandapi-${majorVersion}.${minorVersion}.${patchVersion}.${buildNumber}"
+version = "${majorVersion}.${minorVersion}.${patchVersion}.${buildNumber}"
 
 def fetchLatestGitVersion() {
     def latestVersion = [0, 0, 1] // デフォルトバージョンを0.0.1に変更
@@ -140,10 +140,8 @@ publishing {
             from components.java
             artifactId = 'kcommandapi'
             
-            // Maven Central向けのバージョン処理（ビルド番号を除外）
-            version = version.toString().contains("SNAPSHOT") ? 
-                version : 
-                project.version.toString().replaceFirst("kcommandapi-", "").replace(".${buildNumber}", "")
+            // バージョン処理の修正
+            version = project.version.toString()
             
             pom {
                 name = 'KCommandAPI'
@@ -174,7 +172,6 @@ publishing {
             }
         }
     }
-    
     repositories {
         maven {
             name = "Local"
@@ -285,7 +282,7 @@ tasks.register('syncVersionWithGit') {
         versionFile.withOutputStream { versionProps.store(it, "Version properties for ${project.name}") }
         
         // バージョンプロパティの再読み込み
-        project.version = "${gitVersion[0]}.${gitVersion[1]}.${gitVersion[2]}-build.${buildNumber}"
+        project.version = "${gitVersion[0]}.${gitVersion[1]}.${gitVersion[2]}.${buildNumber}"
         println "Version synchronized with Git: ${project.version}"
     }
 }
