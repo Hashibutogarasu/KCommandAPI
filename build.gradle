@@ -274,3 +274,41 @@ tasks.register('incrementBuildNumber') {
         println "Build number incremented to: ${currentBuildNumber + 1}"
     }
 }
+
+tasks.register('packageForMavenCentral', Zip) {
+    group = 'publishing'
+    description = 'Creates a ZIP file containing all artifacts for Maven Central publication'
+    
+    dependsOn jar, javadocJar, sourcesJar, publishToMavenLocal
+    
+    doFirst {
+        def distributionsDir = file("${buildDir}/distributions")
+        if (!distributionsDir.exists()) {
+            distributionsDir.mkdirs()
+            println "Created distributions directory at: ${distributionsDir.absolutePath}"
+        }
+    }
+    
+    from layout.buildDirectory.dir('publications/mavenJava')
+    include '*.pom', '*.jar', '*.asc'
+    
+    archiveBaseName.set('maven-central-package')
+    archiveClassifier.set('bundle')
+    destinationDirectory = file("${buildDir}/distributions")
+    
+    doLast {
+        println "Maven Central bundle created at: ${archiveFile.get().asFile.absolutePath}"
+    }
+}
+
+tasks.register('prepareMavenCentralRelease') {
+    group = 'publishing'
+    description = 'Prepares all necessary artifacts for Maven Central release'
+    
+    dependsOn clean, packageForMavenCentral
+    
+    doLast {
+        println "Release package prepared for Maven Central"
+        println "Please check the bundle at: ${tasks.packageForMavenCentral.archiveFile.get().asFile.absolutePath}"
+    }
+}
