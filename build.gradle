@@ -42,7 +42,8 @@ def minorVersion = versionProps.getProperty('minor').toInteger()
 def patchVersion = versionProps.getProperty('patch').toInteger()
 def buildNumber = buildProps.getProperty('buildNumber').toInteger()
 
-version = "${majorVersion}.${minorVersion}.${patchVersion}-build.${buildNumber}"
+// バージョン形式の変更
+version = "kcommandapi-${majorVersion}.${minorVersion}.${patchVersion}.${buildNumber}"
 
 def fetchLatestGitVersion() {
     def latestVersion = [0, 0, 1] // デフォルトバージョンを0.0.1に変更
@@ -139,8 +140,10 @@ publishing {
             from components.java
             artifactId = 'kcommandapi'
             
-            // Maven Centralへのパブリッシュ時はビルド番号を除外
-            version = project.version.toString().replace("-build.${buildNumber}", "")
+            // Maven Central向けのバージョン処理（ビルド番号を除外）
+            version = version.toString().contains("SNAPSHOT") ? 
+                version : 
+                project.version.toString().replaceFirst("kcommandapi-", "").replace(".${buildNumber}", "")
             
             pom {
                 name = 'KCommandAPI'
