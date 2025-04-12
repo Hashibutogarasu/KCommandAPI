@@ -198,6 +198,16 @@ publishing {
                 }
             }
         }
+        else{
+            maven {
+                name = "MavenCentral"
+                url = uri("https://oss.sonatype.org/repository/maven-releases/")
+                credentials {
+                    username = findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER")
+                    password = findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
+                }
+            }
+        }
     }
 }
 
