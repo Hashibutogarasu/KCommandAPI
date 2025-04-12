@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'maven-publish'
     id 'signing'
-    id 'org.danilopianini.publish-on-central' version '8.0.6'
+    id("io.gitee.pkmer.pkmerboot-central-publisher") version "1.1.1"
 }
 
 group = 'com.karasu256'
@@ -125,20 +125,11 @@ processResources {
     }
 }
 
-publishOnCentral {
-    repoOwner = 'Hashibutogarasu'
-    projectDescription = 'A Minecraft plugin that provides command API'
-    projectLongName = project.name
-    licenseName = 'MIT License'
-    licenseUrl = 'https://opensource.org/licenses/MIT'
-    projectUrl = "https://github.com/Hashibutogarasu/KCommandAPI"
-    scmConnection = "scm:git:https://github.com/Hashibutogarasu/KCommandAPI"
-
-    mavenCentral.user.set(findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER"))
-    mavenCentral.password.set(findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD"))
-
-    if (version.toString().endsWith("-SNAPSHOT")) {
-        mavenCentralSnapshotsRepository()
+pkmerBoot {
+    sonatypeMavenCentral{
+        stagingRepository = layout.buildDirectory.dir("repos/bundles")
+        username = findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER")
+        password = findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
     }
 }
 
@@ -183,6 +174,11 @@ publishing {
     
     repositories {
         maven {
+            name = "Local"
+            url = layout.buildDirectory.dir('repos/bundles')
+        }
+        
+        maven {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/Hashibutogarasu/KCommandAPI")
             credentials {
@@ -195,16 +191,6 @@ publishing {
             maven {
                 name = "MavenCentralSnapshots"
                 url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
-                credentials {
-                    username = findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER")
-                    password = findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
-                }
-            }
-        }
-        else{
-            maven {
-                name = "MavenCentral"
-                url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
                 credentials {
                     username = findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER")
                     password = findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
@@ -233,6 +219,7 @@ signing {
     }
     
     required { gradle.taskGraph.hasTask("publish") }
+    sign publishing.publications.mavenJava
 }
 
 tasks.withType(PublishToMavenRepository) {
@@ -247,7 +234,7 @@ tasks.register('buildJar', Jar) {
 
 tasks.named('build') {
     dependsOn 'sourcesJar', 'javadocJar', 'syncVersionWithGit'
-    finalizedBy 'signMavenJavaPublication', 'incrementBuildNumber'
+    finalizedBy 'incrementBuildNumber'
 }
 
 tasks.register('incrementBuildNumber') {
@@ -302,5 +289,5 @@ tasks.register('syncVersionWithGit') {
 
 tasks.named('build') {
     dependsOn 'sourcesJar', 'javadocJar', 'syncVersionWithGit'
-    finalizedBy 'signMavenJavaPublication', 'incrementBuildNumber'
+    finalizedBy 'incrementBuildNumber'
 }
