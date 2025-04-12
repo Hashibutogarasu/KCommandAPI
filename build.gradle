@@ -260,7 +260,7 @@ tasks.register('syncVersionWithGit') {
 
 tasks.named('build') {
     dependsOn 'syncVersionWithGit'
-    finalizedBy 'incrementBuildNumber'
+    finalizedBy 'incrementBuildNumber', 'packageForMavenCentral'
 }
 
 tasks.register('incrementBuildNumber') {
