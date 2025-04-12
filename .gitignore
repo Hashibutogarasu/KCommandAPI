@@ -1,0 +1,50 @@
+# Gradle project-specific cache directory
+.gradle
+
+# Gradle build output directory
+build/
+
+# IDE-specific files (IntelliJ IDEA, Eclipse, VS Code)
+.idea/
+*.iml
+*.iws
+.settings/
+.classpath
+.project
+.vscode/
+
+# Compiled class files
+*.class
+
+# Log files
+*.log
+*.log.gz
+logs/
+
+# Minecraft server-specific files
+run/
+run/**
+!run/server.properties
+!run/bukkit.yml
+!run/spigot.yml
+
+# Package files
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+# Gradle Wrapperは例外的に含める
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local configuration files
+*.properties
+!gradle-wrapper.properties
+!build-number.properties
+!version.properties
+
+# Runtime directories
+bin/
+out/
