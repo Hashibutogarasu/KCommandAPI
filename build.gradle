@@ -128,9 +128,18 @@ processResources {
 publishOnCentral {
     repoOwner = 'Hashibutogarasu'
     projectDescription = 'A Minecraft plugin that provides command API'
+    projectLongName = project.name
+    licenseName = 'MIT License'
+    licenseUrl = 'https://opensource.org/licenses/MIT'
+    projectUrl = "https://github.com/Hashibutogarasu/KCommandAPI"
+    scmConnection = "scm:git:https://github.com/Hashibutogarasu/KCommandAPI"
 
     mavenCentral.user.set(findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER"))
     mavenCentral.password.set(findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD"))
+
+    if (version.toString().endsWith("-SNAPSHOT")) {
+        mavenCentralSnapshotsRepository()
+    }
 }
 
 publishing {
