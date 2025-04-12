@@ -279,7 +279,6 @@ tasks.register('packageForMavenCentral', Zip) {
     group = 'publishing'
     description = 'Creates a ZIP file containing all artifacts for Maven Central publication'
     
-    // 依存関係の順序を修正
     dependsOn jar, javadocJar, sourcesJar, 'generatePomFileForMavenJavaPublication'
     
     doFirst {
@@ -290,7 +289,6 @@ tasks.register('packageForMavenCentral', Zip) {
         }
     }
     
-    // ファイル取得元を修正
     from(jar) {
         rename { "kcommandapi-${project.version}.jar" }
     }
