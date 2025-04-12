@@ -45,7 +45,7 @@ def buildNumber = buildProps.getProperty('buildNumber').toInteger()
 version = "${majorVersion}.${minorVersion}.${patchVersion}-build.${buildNumber}"
 
 def fetchLatestGitVersion() {
-    def latestVersion = [0, 1, 0]
+    def latestVersion = [0, 0, 1] // デフォルトバージョンを0.0.1に変更
     try {
         def process = "git ls-remote --tags https://github.com/Hashibutogarasu/KCommandAPI.git".execute()
         def tags = process.text.readLines()
@@ -56,9 +56,26 @@ def fetchLatestGitVersion() {
             def latest = tags.last()
             latestVersion = latest.tokenize('.').collect { it.toInteger() }
             println "Found latest version tag: v${latest}"
+            
+            // 現在のバージョンと新しいバージョンを比較
+            def currentVersion = [
+                versionProps.getProperty('major', '0').toInteger(),
+                versionProps.getProperty('minor', '0').toInteger(),
+                versionProps.getProperty('patch', '0').toInteger()
+            ]
+            
+            if (latestVersion != currentVersion) {
+                println "Version changed from ${currentVersion.join('.')} to ${latestVersion.join('.')}"
+                // ビルドナンバーをリセット
+                buildProps.setProperty('buildNumber', '0')
+                buildProps.store(buildNumberFile.newWriter(), null)
+            }
+        } else {
+            println "No version tags found. Using default version: ${latestVersion.join('.')}"
         }
     } catch (Exception e) {
         println "Warning: Failed to fetch version from Git: ${e.message}"
+        println "Using default version: ${latestVersion.join('.')}"
     }
     return latestVersion
 }
@@ -201,4 +218,46 @@ tasks.named('generateMetadataFileForMavenJavaPublication') {
 tasks.register('copyJar', Copy) {
     from buildJar
     into 'run/plugins'
+}
+
+tasks.register('updatePluginVersion') {
+    group = 'build'
+    description = 'Update plugin.yml version from project version'
+    
+    doLast {
+        def pluginYml = file('src/main/resources/plugin.yml')
+        def lines = pluginYml.readLines()
+        def updatedLines = lines.collect { line ->
+            if (line.trim().startsWith('version:')) {
+                return "version: '${project.version}'"
+            }
+            return line
+        }
+        pluginYml.text = updatedLines.join('\n')
+    }
+}
+
+tasks.named('processResources') {
+    dependsOn 'updatePluginVersion'
+}
+
+tasks.register('syncVersionWithGit') {
+    group = 'build'
+    description = 'Synchronize version with GitHub release tags'
+    
+    doLast {
+        def gitVersion = fetchLatestGitVersion()
+        versionProps.setProperty('major', gitVersion[0].toString())
+        versionProps.setProperty('minor', gitVersion[1].toString())
+        versionProps.setProperty('patch', gitVersion[2].toString())
+        versionFile.withOutputStream { versionProps.store(it, "Version properties for ${project.name}") }
+        
+        // バージョンプロパティの再読み込み
+        project.version = "${gitVersion[0]}.${gitVersion[1]}.${gitVersion[2]}-build.${buildNumber}"
+        println "Version synchronized with Git: ${project.version}"
+    }
+}
+
+tasks.named('build') {
+    dependsOn 'syncVersionWithGit'
 }

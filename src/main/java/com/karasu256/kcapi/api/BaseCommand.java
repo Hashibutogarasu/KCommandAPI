@@ -21,6 +21,13 @@ public class BaseCommand implements CommandExecutor, TabCompleter {
     private static final String DEFAULT_COMMAND = "help";
 
     /**
+     * BaseCommandのコンストラクタです。
+     */
+    public BaseCommand(){
+
+    }
+
+    /**
      * サブコマンドを登録します
      * @param name サブコマンドの名前
      * @param subCommand サブコマンド
