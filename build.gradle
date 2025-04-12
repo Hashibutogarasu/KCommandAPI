@@ -191,7 +191,7 @@ publishing {
         if (version.toString().endsWith("-SNAPSHOT")) {
             maven {
                 name = "MavenCentralSnapshots"
-                url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
+                url = uri("https://s01.oss.sonatype.org/content/repositories/snapshots/")
                 credentials {
                     username = findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER")
                     password = findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
@@ -201,7 +201,7 @@ publishing {
         else{
             maven {
                 name = "MavenCentral"
-                url = uri("https://oss.sonatype.org/repository/maven-releases/")
+                url = uri("https://s01.oss.sonatype.org/repository/maven-releases/")
                 credentials {
                     username = findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER")
                     password = findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD")
