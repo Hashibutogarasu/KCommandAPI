@@ -12,6 +12,9 @@ import org.bukkit.command.TabCompleter;
 
 /**
  * コマンドの基本的な処理を提供するベースクラス
+ * 
+ * @author Hashibutogarasu
+ * @version 1.0
  */
 public class BaseCommand implements CommandExecutor, TabCompleter {
     private static final Map<List<String>, CommandExecutor> subCommands = new HashMap<>();

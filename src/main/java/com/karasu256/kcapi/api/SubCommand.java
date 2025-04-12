@@ -33,7 +33,7 @@ public interface SubCommand {
 
     /**
      * コマンドの使い方を表示します。実装されていない場合は登録されていないメッセージを表示します
-     * @param sender
+     * @param sender コマンドの送信者
      */
     default void showHelp(CommandSender sender) {
         sender.sendMessage(ChatColor.RED + "このサブコマンドの使い方は登録されていません。");

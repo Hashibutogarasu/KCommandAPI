@@ -9,9 +9,16 @@ import com.karasu256.kcapi.commands.MainCommand;
 /**
  * コマンドの登録と管理を簡略化するヘルパークラス
  * 
- * @param <T> MainCommandを拡張したクラス型
+ * @author Hashibutogarasu
+ * @version 1.0
  */
 public class CommandHelper {
+    /**
+     * コマンドのヘルパークラスのインスタンス化を防ぐためのコンストラクタ
+     */
+    protected CommandHelper() {
+    }
+
     /**
      * コマンドを登録するメソッド
      * 

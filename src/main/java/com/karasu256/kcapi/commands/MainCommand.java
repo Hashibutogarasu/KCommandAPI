@@ -57,11 +57,19 @@ public class MainCommand extends AbstractMainCommand {
         }
     }
 
+    /**
+     * コマンドの名前を取得します。
+     * @return コマンドの名前
+     */
     @Override
     public String getCommandName() {
         return "kcapi";
     }
     
+    /**
+     * プラグインのインスタンスを取得します。
+     * @return プラグインのインスタンス
+     */
     public JavaPlugin getPlugin() {
         return plugin;
     }
