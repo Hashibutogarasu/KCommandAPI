@@ -138,6 +138,9 @@ processResources {
 publishOnCentral {
     repoOwner = 'Hashibutogarasu'
     projectDescription = 'A Minecraft plugin that provides command API'
+
+    mavenCentral.user.set(findProperty("mavenCentral.user") ?: System.getenv("MAVEN_CENTRAL_USER"))
+    mavenCentral.password.set(findProperty("mavenCentral.password") ?: System.getenv("MAVEN_CENTRAL_PASSWORD"))
 }
 
 publishing {
