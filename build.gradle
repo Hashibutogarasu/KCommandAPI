@@ -187,7 +187,8 @@ signing {
     required = !project.hasProperty('skipSigning')
     
     if (hasGpgKeys) {
-        useGpg()
+        useGpgCmd()
+        
         gpg {
             keyName = keyId
             passphrase = passphrase
