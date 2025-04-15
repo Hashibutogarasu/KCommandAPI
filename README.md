@@ -1,4 +1,5 @@
-# カラス印のコマンドAPI
+# カラス印のコマンドAPI 
+[![Paper](https://img.shields.io/badge/Paper-1.21.3-blue.svg)](https://papermc.io/)
 
 このAPIを使用することで、階層構造を持つコマンドとサブコマンドを簡単に実装することができます。タブ補完機能も含まれており、コマンド開発をスムーズに行えます。
 
