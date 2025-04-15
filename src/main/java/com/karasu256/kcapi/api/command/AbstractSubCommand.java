@@ -27,7 +27,7 @@ public abstract class AbstractSubCommand extends AbstractCommand implements ISub
     /**
      * 親コマンド
      */
-    private final ICommand parent;
+    private ICommand parent;
 
     /**
      * コンストラクタ
@@ -58,37 +58,53 @@ public abstract class AbstractSubCommand extends AbstractCommand implements ISub
     }
 
     @Override
+    public void addSubCommand(ISubCommand subCommand) {
+        this.subCommands.add(subCommand);
+    }
+
+    @Override
     public List<ISubCommand> getSubCommands() {
         return subCommands;
     }
 
     @Override
     public void setParentCommand(ICommand parentCommand) {
-        // 既に親コマンドが設定されているため、何もしない
+        this.parent = parentCommand;
+    }
+
+    @Override
+    public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias,
+            @NotNull String[] args) throws IllegalArgumentException {
+        for (String arg : args) {
+            if (arg.isEmpty()) {
+                return new ArrayList<>();
+            }
+        }
+        
+        return this.getSubCommands().stream()
+                .filter(subCommand -> subCommand.getName().startsWith(args[args.length - 1]))
+                .map(subCommand -> subCommand.getName())
+                .toList();
     }
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
-            String[] args) {
+            @NotNull String[] args) {
         if (args.length == 0) {
-            // 引数がない場合は、このサブコマンド自体を実行
-            return this.onCommand(sender, command, label, args);
+            return this.execute(sender, label, args);
         }
 
-        // 次のサブコマンドを探す
         String subCommandName = args[0];
-        for (ISubCommand subCommand : this.subCommands) {
-            if (subCommand.getName().equalsIgnoreCase(subCommandName)) {
-                // 残りの引数を渡す
-                String[] newArgs = new String[args.length - 1];
-                System.arraycopy(args, 1, newArgs, 0, args.length - 1);
+        var foundCommand = this.getSubCommands().stream()
+                .filter(subCommand -> subCommand.getName().toLowerCase().startsWith(subCommandName.toLowerCase()))
+                .findFirst()
+                .orElse(null);
 
-                // 子サブコマンドに処理を委譲
-                return subCommand.onCommand(sender, command, label, newArgs);
-            }
+        if (foundCommand != null) {
+            return foundCommand.execute(sender, label, args);
         }
 
-        // 一致するサブコマンドがない場合、このサブコマンド自体で処理
-        return this.onCommand(sender, command, label, args);
+        // サブコマンドが見つからない場合は自身を実行
+        return this.execute(sender, label, args);
     }
 }
