@@ -17,10 +17,35 @@
 </dependency>
 ```
 
-### Gradle
+### Gradle (Groovy DSL)
 
 ```groovy
 implementation 'com.karasu256:kcommandapi:0.0.1.60'
+```
+
+### Gradle (Kotlin DSL)
+
+```kotlin
+implementation("com.karasu256:kcommandapi:0.0.1.60")
+```
+
+### build.gradle
+
+```groovy
+repositories {
+    maven {
+        name = "GithubPackages"
+        url = uri("https://maven.pkg.github.com/karasu256/KCommandAPI")
+        credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
+            password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.karasu256:kcommandapi:0.0.1.60'
+}
 ```
 
 ## 使用方法
