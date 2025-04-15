@@ -227,3 +227,6 @@ public List<String> getTabCompletions(CommandSender sender, String[] args) {
     return new ArrayList<>();
 }
 ```
+
+## ライセンス
+このレポジトリはCC-BY-SA-4.0 licenseです。
