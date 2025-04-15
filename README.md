@@ -229,4 +229,4 @@ public List<String> getTabCompletions(CommandSender sender, String[] args) {
 ```
 
 ## ライセンス
-このレポジトリはCC-BY-4.0 licenseです。
+このレポジトリのライセンスはCC BY 4.0です。
