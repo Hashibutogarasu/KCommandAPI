@@ -1,58 +1,55 @@
 package com.karasu256.kcapi.api.command;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * コマンドの終端を示す抽象クラスです。
- * このクラスを継承するサブコマンドは子コマンドを持たず、コマンドの終端となります。
+ * 終端サブコマンドの基本的な実装を提供する抽象クラスです。
+ * このクラスを継承することで、簡単に終端サブコマンドを実装できます。
  *
  * @author Hashibutogarasu
  * @version 1.0
  */
 public abstract class AbstractEndOfSubCommand extends AbstractSubCommand implements IEndOfSubCommand {
+    /**
+     * 親コマンド
+     */
+    private ICommand parentCommand;
 
     /**
-     * コンストラクタ
+     * 終端サブコマンドを初期化します。
      * 
-     * @param name   コマンドの名前
-     * @param parent 親コマンド
+     * @param name サブコマンド名
      */
-    public AbstractEndOfSubCommand(String name, ICommand parent) {
-        super(name, parent);
+    public AbstractEndOfSubCommand(String name, ISubCommand subCommand) {
+        super(name, subCommand);
+        this.parentCommand = subCommand;
     }
 
     /**
-     * サブコマンドのリストを取得します。
-     * 終端コマンドは子コマンドを持たないため、常に空のリストを返します。
-     *
-     * @return 空のサブコマンドリスト
+     * 終端サブコマンドを初期化します。
+     * 
+     * @param name サブコマンド名
      */
-    @Override
-    public List<ISubCommand> getSubCommands() {
-        return new ArrayList<>();
+    public AbstractEndOfSubCommand(String name, ICommand subCommand) {
+        super(name, subCommand);
+        this.parentCommand = subCommand;
     }
 
     /**
-     * 子コマンドを追加しようとしても無視されます。
-     * 終端コマンドは子コマンドを持てません。
-     *
-     * @param child 追加しようとする子コマンド（無視されます）
+     * 親コマンドを設定します。
+     * 
+     * @param parentCommand 親コマンド
      */
     @Override
-    public void addChildCommand(ISubCommand child) {
-        // 終端コマンドは子コマンドを持てないため、このメソッドは何もしません
-        AbstractCommand.LOGGER.warning(this.getName() + " は終端コマンドであるため、子コマンドを追加できません。");
+    public void setParentCommand(ICommand parentCommand) {
+        this.parentCommand = parentCommand;
     }
 
     /**
-     * このコマンドが終端であるかどうかを返します。
-     * 常に true を返します。
+     * 親コマンドを取得します。
      *
-     * @return 常に true
+     * @return 親コマンド
      */
     @Override
-    public boolean isEndOfCommand() {
-        return true;
+    public ICommand getParentCommand() {
+        return this.parentCommand;
     }
 }

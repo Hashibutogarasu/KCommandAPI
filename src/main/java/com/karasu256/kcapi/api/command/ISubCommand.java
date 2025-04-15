@@ -1,50 +1,41 @@
 package com.karasu256.kcapi.api.command;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * サブコマンドのインターフェースです
+ * サブコマンドのインターフェースです。
+ * 親コマンドの下に位置するサブコマンドを表します。
  *
  * @author Hashibutogarasu
  * @version 1.0
  */
 public interface ISubCommand extends ICommand {
     /**
-     * 子コマンドのリストです
-     */
-    List<ISubCommand> childCommands = new ArrayList<>();
-
-    /**
-     * サブコマンドのリストを取得します
-     * @return サブコマンドのリスト
-     */
-    @Override
-    default List<ISubCommand> getSubCommands() {
-        return childCommands;
-    }
-
-    /**
-     * 親コマンドを設定します
-     * @param parent 親コマンド
-     */
-    default void setParentCommand(ICommand parent) {
-    }
-
-    /**
-     * 親コマンドを取得します。デフォルトではnullが返されます
+     * このサブコマンドの親コマンドを取得します。
      * @return 親コマンド
      */
     default ICommand getParentCommand() {
         return null;
     }
-
+    
     /**
-     * 子コマンドを追加します
-     * @param child 子コマンド
+     * このサブコマンドの親コマンドを設定します。
+     * @param parentCommand 親コマンド
      */
-    default void addChildCommand(ISubCommand child) {
-        child.setParentCommand(this);
-        childCommands.add(child);
+    void setParentCommand(ICommand parentCommand);
+    
+    /**
+     * 完全なコマンドパスを取得します。
+     * @return 親コマンドから始まる完全なコマンドパス（例：parent subcommand）
+     */
+    default String getFullPath() {
+        ICommand parent = getParentCommand();
+        if (parent == null) {
+            return getName();
+        }
+        
+        if (parent instanceof ISubCommand) {
+            return ((ISubCommand) parent).getFullPath() + " " + getName();
+        }
+        
+        return parent.getName() + " " + getName();
     }
 }
