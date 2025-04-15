@@ -1,8 +1,8 @@
 # カラス印のコマンドAPI
 
-このプラグインは導入することでコマンド、サブコマンドを簡単に実装することができます
+このAPIを使用することで、階層構造を持つコマンドとサブコマンドを簡単に実装することができます。タブ補完機能も含まれており、コマンド開発をスムーズに行えます。
 
-このプラグインはAPIなので、github packagesからインポートし、それを別のプロジェクトで使うことを前提にしています。
+このプラグインはAPIとして設計されており、github packagesからインポートして別のプロジェクトで使用することを前提としています。
 
 ## インストール方法
 
@@ -12,19 +12,21 @@
 <dependency>
   <groupId>com.karasu256</groupId>
   <artifactId>kcommandapi</artifactId>
-  <version>0.0.1.46</version>
+  <version>0.0.1.60</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.karasu256:kcommandapi:0.0.1.46'
+implementation 'com.karasu256:kcommandapi:0.0.1.60'
 ```
 
 ## 使用方法
 
 ### 基本的なコマンドの作成
+
+最初に、メインコマンドを作成します。これはプレイヤーが実行する基本コマンドです。
 
 ```java
 public class MyCommand extends AbstractCommand {
@@ -46,6 +48,8 @@ public class MyCommand extends AbstractCommand {
 
 ### サブコマンドの作成と追加
 
+メインコマンドの後に実行されるサブコマンドを作成します。例: `/mycommand sub`
+
 ```java
 public class MySubCommand extends AbstractSubCommand {
     
@@ -54,7 +58,7 @@ public class MySubCommand extends AbstractSubCommand {
     }
     
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         sender.sendMessage("サブコマンドが実行されました");
         return true;
     }
@@ -67,6 +71,8 @@ myCommand.addSubCommand(new MySubCommand(myCommand));
 
 ### ネストされたサブコマンドの作成
 
+サブコマンドの下に更に階層を持つネストされたサブコマンドを作成できます。例: `/mycommand sub nested`
+
 ```java
 public class MyNestedSubCommand extends AbstractNestedSubCommand {
     
@@ -75,7 +81,7 @@ public class MyNestedSubCommand extends AbstractNestedSubCommand {
     }
     
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         sender.sendMessage("ネストされたサブコマンドが実行されました");
         return true;
     }
@@ -89,7 +95,7 @@ myCommand.addSubCommand(mySubCommand);
 
 ### 終端コマンドの作成
 
-終端コマンドは子コマンドを持たない最終ノードのコマンドです。このコマンドはタブ補完時に独自のパラメータ候補のみを表示します。
+終端コマンドは子コマンドを持たない最終ノードのコマンドです。このコマンドはタブ補完時に独自のパラメータ候補のみを表示します。例: `/mycommand sub nested end [option1|option2]`
 
 ```java
 public class MyEndCommand extends AbstractEndOfSubCommand {
@@ -99,7 +105,7 @@ public class MyEndCommand extends AbstractEndOfSubCommand {
     }
     
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
         sender.sendMessage("終端コマンドが実行されました");
         return true;
     }
@@ -116,20 +122,45 @@ public class MyEndCommand extends AbstractEndOfSubCommand {
 
 // ネストされたサブコマンドに終端コマンドを追加
 MyNestedSubCommand nestedSubCommand = new MyNestedSubCommand(mySubCommand);
-nestedSubCommand.addChildCommand(new MyEndCommand(nestedSubCommand));
-mySubCommand.addChildCommand(nestedSubCommand);
+nestedSubCommand.addSubCommand(new MyEndCommand(nestedSubCommand));
+mySubCommand.addSubCommand(nestedSubCommand);
+```
+
+### コマンド構造の設計例
+
+以下のような階層構造を作成できます:
+
+```
+/mycommand                  - メインコマンド
+├── /mycommand sub          - サブコマンド
+│   ├── /mycommand sub nested     - ネストされたサブコマンド
+│   │   └── /mycommand sub nested end  - 終端コマンド
+│   └── /mycommand sub other      - 別のサブコマンド
+└── /mycommand info        - 別のサブコマンド
 ```
 
 ### プラグインへの登録
+
+作成したコマンドをプラグインに登録します。
 
 ```java
 public class MyPlugin extends JavaPlugin {
     
     @Override
     public void onEnable() {
+        // メインコマンドの作成
         MyCommand myCommand = new MyCommand();
-        // サブコマンドの追加
-        myCommand.addSubCommand(new MySubCommand(myCommand));
+        
+        // サブコマンドの作成と追加
+        MySubCommand mySubCommand = new MySubCommand(myCommand);
+        myCommand.addSubCommand(mySubCommand);
+        
+        // ネストされたサブコマンドの追加
+        MyNestedSubCommand nestedSubCommand = new MyNestedSubCommand(mySubCommand);
+        mySubCommand.addSubCommand(nestedSubCommand);
+        
+        // 終端コマンドの追加
+        nestedSubCommand.addSubCommand(new MyEndCommand(nestedSubCommand));
         
         // コマンドを登録
         getServer().getCommandMap().register("myplugin", myCommand);
@@ -141,3 +172,32 @@ public class MyPlugin extends JavaPlugin {
 
 - サブコマンドを追加する前に、必ず親コマンドのインスタンスを作成してください
 - ネストされたサブコマンドは、必ず親のサブコマンドのインスタンスを作成した後に追加してください
+- 終端コマンドはサブコマンドを持てませんが、独自のタブ補完候補を提供できます
+- `execute` メソッドを使用してコマンドの実行処理を実装してください (`onCommand` ではなく)
+
+## 高度な使用例
+
+### タブ補完の拡張
+
+サブコマンドに対して、動的なタブ補完を実装できます。
+
+```java
+@Override
+public List<String> getTabCompletions(CommandSender sender, String[] args) {
+    if (args.length == 1) {
+        List<String> options = new ArrayList<>();
+        options.add("create");
+        options.add("delete");
+        options.add("list");
+        return options.stream()
+                .filter(option -> option.startsWith(args[0].toLowerCase()))
+                .collect(Collectors.toList());
+    } else if (args.length == 2 && args[0].equalsIgnoreCase("delete")) {
+        // 「delete」の後には存在するアイテム名を表示
+        return getAllItemNames().stream()
+                .filter(name -> name.startsWith(args[1].toLowerCase()))
+                .collect(Collectors.toList());
+    }
+    return new ArrayList<>();
+}
+```

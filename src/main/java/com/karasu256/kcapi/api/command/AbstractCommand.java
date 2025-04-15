@@ -44,7 +44,6 @@ public abstract class AbstractCommand extends Command implements ICommand {
         this.subCommands.addAll(Arrays.stream(subCommands).toList());
     }
 
-
     /**
      * サブコマンドを追加します
      *
@@ -107,7 +106,7 @@ public abstract class AbstractCommand extends Command implements ICommand {
      */
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
-                             @NotNull String[] args) {
+            @NotNull String[] args) {
         if (args.length == 0) {
             return execute(sender, label, args);
         }
@@ -154,47 +153,47 @@ public abstract class AbstractCommand extends Command implements ICommand {
         // 最初の引数に一致するサブコマンドを探す
         if (args.length >= 1) {
             String firstArg = args[0];
-            
+
             // 最初の引数が空の場合、全サブコマンド名を返す
             if (firstArg.isEmpty()) {
                 return getSubCommands().stream()
                         .map(ICommand::getName)
                         .collect(Collectors.toList());
             }
-            
+
             // 最初の引数に基づいてサブコマンドをフィルタリング
             if (args.length == 1) {
                 List<String> candidates = getSubCommands().stream()
                         .map(ICommand::getName)
                         .filter(name -> name.toLowerCase().startsWith(firstArg.toLowerCase()))
                         .collect(Collectors.toList());
-                
+
                 // サブコマンド候補がない場合は、独自のタブ補完候補を提供
                 return candidates.isEmpty() ? getTabCompletions(sender, args) : candidates;
             }
-            
+
             // 適切なサブコマンドを特定し、残りの引数を渡す
             for (ISubCommand subCmd : getSubCommands()) {
                 if (subCmd.getName().equalsIgnoreCase(firstArg)) {
                     // 最初の引数を取り除いた新しい引数配列を作成
                     String[] newArgs = new String[args.length - 1];
                     System.arraycopy(args, 1, newArgs, 0, args.length - 1);
-                    
+
                     // サブコマンドが終端コマンドの場合
-                    if (subCmd instanceof IEndOfSubCommand endOfSubCommand && 
-                        (endOfSubCommand.isEndOfCommand() && newArgs.length > 0)) {
+                    if (subCmd instanceof IEndOfSubCommand endOfSubCommand &&
+                            (endOfSubCommand.isEndOfCommand() && newArgs.length > 0)) {
                         return subCmd.getTabCompletions(sender, newArgs);
                     }
-                    
+
                     // サブコマンドのタブ補完処理を呼び出す
                     return subCmd.onTabComplete(sender, command, alias, newArgs);
                 }
             }
-            
+
             // 適切なサブコマンドが見つからない場合
             return getTabCompletions(sender, args);
         }
-        
+
         return new ArrayList<>();
     }
 }

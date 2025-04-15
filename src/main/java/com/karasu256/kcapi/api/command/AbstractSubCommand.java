@@ -80,7 +80,7 @@ public abstract class AbstractSubCommand extends AbstractCommand implements ISub
                 return new ArrayList<>();
             }
         }
-        
+
         return this.getSubCommands().stream()
                 .filter(subCommand -> subCommand.getName().startsWith(args[args.length - 1]))
                 .map(subCommand -> subCommand.getName())
