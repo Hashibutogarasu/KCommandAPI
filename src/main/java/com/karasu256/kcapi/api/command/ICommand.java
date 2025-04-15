@@ -1,4 +1,4 @@
-package com.karasu256.teamUtils.api.command;
+package com.karasu256.kcapi.api.command;
 
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -10,9 +10,22 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * コマンドのインターフェースです
+ *
+ * @author Hashibutogarasu
+ * @version 1.0
+ */
 public interface ICommand extends CommandExecutor, TabCompleter {
+    /**
+     * 子コマンドのリストです
+     */
     List<ISubCommand> subCommand = new ArrayList<>();
 
+    /**
+     * サブコマンドのリストを取得します。
+     * @return サブコマンドのリスト
+     */
     default List<ISubCommand> getSubCommands() {
         return subCommand;
     }

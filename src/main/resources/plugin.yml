@@ -1,17 +1,5 @@
 name: KarasuCommandAPI
-version: '0.0.1.37'
-main: com.karasu256.KarasuCommandAPI.KarasuCommandAPI
+version: '0.0.1.40'
+main: com.karasu256.kcapi.KarasuCommandAPI
 api-version: "1.21"
 authors: [Hashibutogarasu]
-
-commands:
-  kcapiexample:
-    description: KCommandAPIのサンプルコマンド
-    usage: /kcapiexample create test <number>
-    permission: kcapi.example
-    permission-message: このコマンドを実行する権限がありません。
-
-permissions:
-  kcapi.example:
-    description: KCommandAPIのサンプルコマンドを実行する権限
-    default: op

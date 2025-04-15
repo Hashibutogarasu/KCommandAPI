@@ -131,7 +131,6 @@ publishing {
             from components.java
             artifactId = 'kcommandapi'
             
-            // バージョン処理の修正
             version = project.version.toString()
             
             pom {
@@ -175,17 +174,6 @@ publishing {
             credentials {
                 username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
                 password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
-            }
-        }
-        
-        maven {
-            name = "OSSRH"
-            url = version.toString().endsWith("-SNAPSHOT") 
-                ? "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-                : "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            credentials {
-                username = findProperty("ossrh.user") ?: System.getenv("OSSRH_USERNAME")
-                password = findProperty("ossrh.password") ?: System.getenv("OSSRH_PASSWORD")
             }
         }
     }
@@ -272,7 +260,6 @@ tasks.register('syncVersionWithGit') {
         versionProps.setProperty('patch', gitVersion[2].toString())
         versionFile.withOutputStream { versionProps.store(it, "Version properties for ${project.name}") }
         
-        // バージョンプロパティの再読み込み
         project.version = "${gitVersion[0]}.${gitVersion[1]}.${gitVersion[2]}.${buildNumber}"
         println "Version synchronized with Git: ${project.version}"
     }

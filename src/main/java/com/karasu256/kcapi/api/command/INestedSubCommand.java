@@ -1,9 +1,11 @@
-package com.karasu256.teamUtils.api.command;
+package com.karasu256.kcapi.api.command;
 
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.jetbrains.annotations.NotNull;
-
+/**
+ * ネストされたサブコマンドのインターフェースです。
+ *
+ * @author Hashibutogarasu
+ * @version 1.0
+ */
 public interface INestedSubCommand extends ISubCommand {
 
 }
