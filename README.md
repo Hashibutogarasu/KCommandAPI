@@ -12,14 +12,14 @@
 <dependency>
   <groupId>com.karasu256</groupId>
   <artifactId>kcommandapi</artifactId>
-  <version>0.0.1.42</version>
+  <version>0.0.1.46</version>
 </dependency>
 ```
 
 ### Gradle
 
 ```groovy
-implementation 'com.karasu256:kcommandapi:0.0.1.42'
+implementation 'com.karasu256:kcommandapi:0.0.1.46'
 ```
 
 ## 使用方法
@@ -85,6 +85,39 @@ public class MyNestedSubCommand extends AbstractNestedSubCommand {
 MySubCommand mySubCommand = new MySubCommand(myCommand);
 mySubCommand.addSubCommand(new MyNestedSubCommand(mySubCommand));
 myCommand.addSubCommand(mySubCommand);
+```
+
+### 終端コマンドの作成
+
+終端コマンドは子コマンドを持たない最終ノードのコマンドです。このコマンドはタブ補完時に独自のパラメータ候補のみを表示します。
+
+```java
+public class MyEndCommand extends AbstractEndOfSubCommand {
+    
+    public MyEndCommand(ICommand parent) {
+        super("end", parent);
+    }
+    
+    @Override
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+        sender.sendMessage("終端コマンドが実行されました");
+        return true;
+    }
+    
+    @Override
+    public List<String> getTabCompletions(CommandSender sender, String[] args) {
+        // このコマンド独自のタブ補完候補を返す
+        List<String> completions = new ArrayList<>();
+        completions.add("option1");
+        completions.add("option2");
+        return completions;
+    }
+}
+
+// ネストされたサブコマンドに終端コマンドを追加
+MyNestedSubCommand nestedSubCommand = new MyNestedSubCommand(mySubCommand);
+nestedSubCommand.addChildCommand(new MyEndCommand(nestedSubCommand));
+mySubCommand.addChildCommand(nestedSubCommand);
 ```
 
 ### プラグインへの登録
