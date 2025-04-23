@@ -44,7 +44,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.karasu256:karasu-command-api:0.0.1.60'
+    implementation 'com.karasu256:karasu-command-api:0.0.1.61'
 }
 ```
 
