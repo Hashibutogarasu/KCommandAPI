@@ -1,5 +1,5 @@
 name: KarasuCommandAPI
-version: '0.0.1.60'
+version: '0.0.1.61'
 main: com.karasu256.kcapi.KarasuCommandAPI
 api-version: "1.21"
 authors: [Hashibutogarasu]
