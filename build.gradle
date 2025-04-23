@@ -47,7 +47,7 @@ version = "${majorVersion}.${minorVersion}.${patchVersion}.${buildNumber}"
 def fetchLatestGitVersion() {
     def latestVersion = [0, 0, 1] // デフォルトバージョンを0.0.1に変更
     try {
-        def process = "git ls-remote --tags https://github.com/Hashibutogarasu/KCommandAPI.git".execute()
+        def process = "git ls-remote --tags https://github.com/Karasu-Lab/KarasuCommandAPI.git".execute()
         def tags = process.text.readLines()
             .collect { it.split()[1].replaceAll("refs/tags/v", "") }
             .findAll { it =~ /^\d+\.\d+\.\d+$/ }
@@ -129,14 +129,14 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
-            artifactId = 'kcommandapi'
+            artifactId = 'karasu-command-api'
             
             version = project.version.toString()
             
             pom {
-                name = 'KCommandAPI'
+                name = 'KarasuCommandAPI'
                 description = 'A Minecraft plugin that provides command API'
-                url = 'https://github.com/Hashibutogarasu/KCommandAPI'
+                url = 'https://github.com/Karasu-Lab/KarasuCommandAPI'
                 
                 licenses {
                     license {
@@ -155,9 +155,9 @@ publishing {
                 }
                 
                 scm {
-                    connection = 'scm:git:git://github.com/Hashibutogarasu/KCommandAPI.git'
-                    developerConnection = 'scm:git:ssh://github.com/Hashibutogarasu/KCommandAPI.git'
-                    url = 'https://github.com/Hashibutogarasu/KCommandAPI'
+                    connection = 'scm:git:git://github.com/Karasu-Lab/KarasuCommandAPI.git'
+                    developerConnection = 'scm:git:ssh://github.com/Karasu-Lab/KarasuCommandAPI.git'
+                    url = 'https://github.com/Karasu-Lab/KarasuCommandAPI'
                 }
             }
         }
@@ -170,7 +170,7 @@ publishing {
         
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/Hashibutogarasu/KCommandAPI")
+            url = uri("https://maven.pkg.github.com/Karasu-Lab/KarasuCommandAPI")
             credentials {
                 username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
                 password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
@@ -206,7 +206,7 @@ tasks.withType(PublishToMavenRepository) {
 }
 
 tasks.register('buildJar', Jar) {
-    archiveBaseName.set('KCommandAPI')
+    archiveBaseName.set('KarasuCommandAPI')
     from sourceSets.main.output
     dependsOn configurations.compileClasspath
 }

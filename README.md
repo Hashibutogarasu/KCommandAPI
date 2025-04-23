@@ -12,7 +12,7 @@
 ```xml
 <dependency>
   <groupId>com.karasu256</groupId>
-  <artifactId>kcommandapi</artifactId>
+  <artifactId>karasu-command-api</artifactId>
   <version>0.0.1.60</version>
 </dependency>
 ```
@@ -20,13 +20,13 @@
 ### Gradle (Groovy DSL)
 
 ```groovy
-implementation 'com.karasu256:kcommandapi:0.0.1.60'
+implementation 'com.karasu256:karasu-command-api:0.0.1.60'
 ```
 
 ### Gradle (Kotlin DSL)
 
 ```kotlin
-implementation("com.karasu256:kcommandapi:0.0.1.60")
+implementation("com.karasu256:karasu-command-api:0.0.1.60")
 ```
 
 ### build.gradle
@@ -35,7 +35,7 @@ implementation("com.karasu256:kcommandapi:0.0.1.60")
 repositories {
     maven {
         name = "GithubPackages"
-        url = uri("https://maven.pkg.github.com/karasu256/KCommandAPI")
+        url = uri("https://maven.pkg.github.com/karasu256/KarasuCommandAPI")
         credentials {
             username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_USERNAME")
             password = project.findProperty("gpr.key") ?: System.getenv("GITHUB_TOKEN")
@@ -44,7 +44,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.karasu256:kcommandapi:0.0.1.60'
+    implementation 'com.karasu256:karasu-command-api:0.0.1.60'
 }
 ```
 
