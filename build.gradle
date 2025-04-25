@@ -106,28 +106,6 @@ publishing {
     }
 }
 
-signing {
-    def signingKey = findProperty("signing.key")
-    def signingPassword = findProperty("signing.password")
-    
-    if (signingKey && signingPassword) {
-        useInMemoryPgpKeys(signingKey, signingPassword)
-    } else {
-        def signingKeyId = findProperty("signing.keyId")
-        def signingSecretKeyRingFile = findProperty("signing.secretKeyRingFile")
-        
-        if (signingKeyId && signingPassword && signingSecretKeyRingFile) {
-            def keyFile = new File(signingSecretKeyRingFile.toString().replaceAll('"', ''))
-            useInMemoryPgpKeys(signingKeyId, keyFile.text, signingPassword)
-        } else {
-            println "署名情報が不完全です - 署名はスキップされます"
-        }
-    }
-    
-    required { gradle.taskGraph.hasTask("publish") }
-    sign publishing.publications.mavenJava
-}
-
 tasks.withType(PublishToMavenRepository) {
     mustRunAfter tasks.withType(Sign)
 }
