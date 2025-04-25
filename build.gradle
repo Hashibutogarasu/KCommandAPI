@@ -9,56 +9,14 @@ group = 'com.karasu256'
 def versionFile = file('version.properties')
 def versionProps = new Properties()
 
-def fetchLatestGitVersion() {
-    def latestVersion = [0, 0, 1] // デフォルトバージョンを0.0.1に変更
-    try {
-        def process = "git ls-remote --tags https://github.com/Karasu-Lab/KarasuCommandAPI.git".execute()
-        def tags = process.text.readLines()
-            .collect { it.split()[1].replaceAll("refs/tags/v", "") }
-            .findAll { it =~ /^\d+\.\d+\.\d+$/ }
-        
-        if (tags) {
-            def latest = tags.last()
-            latestVersion = latest.tokenize('.').collect { it.toInteger() }
-            println "Found latest version tag: v${latest}"
-            
-            // 現在のバージョンと新しいバージョンを比較
-            def currentVersion = [
-                versionProps.getProperty('major', '0').toInteger(),
-                versionProps.getProperty('minor', '0').toInteger(),
-                versionProps.getProperty('patch', '0').toInteger()
-            ]
-            
-            if (latestVersion != currentVersion) {
-                println "Version changed from ${currentVersion.join('.')} to ${latestVersion.join('.')}"
-                // ビルドナンバーをリセット
-                buildProps.setProperty('buildNumber', '0')
-                buildProps.store(buildNumberFile.newWriter(), null)
-            }
-        } else {
-            println "No version tags found. Using default version: ${latestVersion.join('.')}"
-        }
-    } catch (Exception e) {
-        println "Warning: Failed to fetch version from Git: ${e.message}"
-        println "Using default version: ${latestVersion.join('.')}"
-    }
-    return latestVersion
-}
-
-def initializeWithGitVersion() {
-    def gitVersion = fetchLatestGitVersion()
-    versionProps.setProperty('major', gitVersion[0].toString())
-    versionProps.setProperty('minor', gitVersion[1].toString())
-    versionProps.setProperty('patch', gitVersion[2].toString())
-    println "Initialized version from Git: ${gitVersion[0]}.${gitVersion[1]}.${gitVersion[2]}"
-    return gitVersion
-}
-
 // バージョンプロパティとビルド番号の初期化
 if (versionFile.exists()) {
     versionFile.withInputStream { versionProps.load(it) }
 } else {
-    def gitVersion = initializeWithGitVersion()
+    // 初期バージョンを設定
+    versionProps.setProperty('major', '0')
+    versionProps.setProperty('minor', '0')
+    versionProps.setProperty('patch', '1')
     versionFile.createNewFile()
     versionFile.withOutputStream { versionProps.store(it, "Version properties for ${project.name}") }
 }
@@ -71,6 +29,7 @@ if (buildNumberFile.exists()) {
 } else {
     buildProps.setProperty('buildNumber', '0')
     buildNumberFile.createNewFile()
+    buildNumberFile.withOutputStream { buildProps.store(it, "Build Number for ${project.name}") }
 }
 
 def majorVersion = versionProps.getProperty('major').toInteger()
@@ -173,56 +132,8 @@ tasks.withType(PublishToMavenRepository) {
     mustRunAfter tasks.withType(Sign)
 }
 
-tasks.register('buildJar', Jar) {
-    archiveBaseName.set('KarasuCommandAPI')
-    from sourceSets.main.output
-    dependsOn configurations.compileClasspath
-}
-
-tasks.register('incrementBuildNumber') {
-    group = 'build'
-    description = 'Increment build number after successful build'
-    
-    doLast {
-        def currentBuildNumber = buildProps.getProperty('buildNumber').toInteger()
-        buildProps.setProperty('buildNumber', (currentBuildNumber + 1).toString())
-        buildNumberFile.withOutputStream { buildProps.store(it, null) }
-        println "Build number incremented to: ${currentBuildNumber + 1}"
-    }
-}
-
-tasks.register('updatePluginVersion') {
-    group = 'build'
-    description = 'Update plugin.yml version from project version'
-    
-    doLast {
-        def pluginYml = file('src/main/resources/plugin.yml')
-        def lines = pluginYml.readLines()
-        def updatedLines = lines.collect { line ->
-            if (line.trim().startsWith('version:')) {
-                return "version: '${project.version}'"
-            }
-            return line
-        }
-        pluginYml.text = updatedLines.join('\n')
-    }
-}
-
-tasks.register('syncVersionWithGit') {
-    group = 'build'
-    description = 'Synchronize version with GitHub release tags'
-    
-    doLast {
-        def gitVersion = fetchLatestGitVersion()
-        versionProps.setProperty('major', gitVersion[0].toString())
-        versionProps.setProperty('minor', gitVersion[1].toString())
-        versionProps.setProperty('patch', gitVersion[2].toString())
-        versionFile.withOutputStream { versionProps.store(it, "Version properties for ${project.name}") }
-        
-        project.version = "${gitVersion[0]}.${gitVersion[1]}.${gitVersion[2]}.${buildNumber}"
-        println "Version synchronized with Git: ${project.version}"
-    }
-}
+// ルートプロジェクトの共通タスクを適用
+rootProject.ext.createCommonTasks(project)
 
 tasks.named('build') {
     dependsOn 'sourcesJar', 'javadocJar', 'syncVersionWithGit'
@@ -235,30 +146,4 @@ tasks.named('processResources') {
 
 tasks.named('updatePluginVersion') {
     dependsOn 'syncVersionWithGit'
-}
-
-// ビルド失敗時のビルド番号のデクリメント処理を追加
-tasks.register('decrementBuildNumber') {
-    group = 'build'
-    description = 'ビルドが失敗または中断されたときにビルド番号を戻す'
-    
-    doLast {
-        def currentBuildNumber = buildProps.getProperty('buildNumber').toInteger()
-        if (currentBuildNumber > 1) {
-            def newBuildNumber = currentBuildNumber - 1
-            buildProps.setProperty('buildNumber', newBuildNumber.toString())
-            buildNumberFile.withOutputStream { buildProps.store(it, null) }
-            println "ビルド番号を ${newBuildNumber} に戻しました（ビルド失敗または中断）"
-        } else {
-            println "ビルド番号は最小値の1のままです"
-        }
-    }
-}
-
-gradle.buildFinished { result ->
-    if (!result.failure && gradle.startParameter.taskNames.contains('build')) {
-        if (result.action == 'cancelled' || result.action == 'interrupted') {
-            tasks.decrementBuildNumber.execute()
-        }
-    }
 }
