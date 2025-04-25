@@ -40,9 +40,6 @@ def buildNumber = buildProps.getProperty('buildNumber').toInteger()
 // バージョン形式
 version = "${majorVersion}.${minorVersion}.${patchVersion}.${buildNumber}"
 
-// Minecraft（MC）バージョンを定義
-def mcVersion = "1.21.3"
-
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.3-R0.1-SNAPSHOT")
 }
