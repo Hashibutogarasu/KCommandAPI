@@ -9,44 +9,6 @@ group = 'com.karasu256'
 def versionFile = file('version.properties')
 def versionProps = new Properties()
 
-def initializeWithGitVersion() {
-    def gitVersion = fetchLatestGitVersion()
-    versionProps.setProperty('major', gitVersion[0].toString())
-    versionProps.setProperty('minor', gitVersion[1].toString())
-    versionProps.setProperty('patch', gitVersion[2].toString())
-    println "Initialized version from Git: ${gitVersion[0]}.${gitVersion[1]}.${gitVersion[2]}"
-    return gitVersion
-}
-
-if (versionFile.exists()) {
-    versionFile.withInputStream { versionProps.load(it) }
-} else {
-    def gitVersion = initializeWithGitVersion()
-    versionFile.createNewFile()
-    versionFile.withOutputStream { versionProps.store(it, "Version properties for ${project.name}") }
-}
-
-def buildNumberFile = file('build-number.properties')
-def buildProps = new Properties()
-
-if (buildNumberFile.exists()) {
-    buildNumberFile.withInputStream { buildProps.load(it) }
-} else {
-    buildProps.setProperty('buildNumber', '0')
-    buildNumberFile.createNewFile()
-}
-
-def majorVersion = versionProps.getProperty('major').toInteger()
-def minorVersion = versionProps.getProperty('minor').toInteger()
-def patchVersion = versionProps.getProperty('patch').toInteger()
-def buildNumber = buildProps.getProperty('buildNumber').toInteger()
-
-// バージョン形式の変更
-version = "${majorVersion}.${minorVersion}.${patchVersion}.${buildNumber}"
-
-// Minecraft（MC）バージョンを定義
-def mcVersion = "1.21.3"
-
 def fetchLatestGitVersion() {
     def latestVersion = [0, 0, 1] // デフォルトバージョンを0.0.1に変更
     try {
@@ -83,49 +45,52 @@ def fetchLatestGitVersion() {
     return latestVersion
 }
 
-repositories {
-    mavenCentral()
-    maven {
-        name = "papermc-repo"
-        url = "https://repo.papermc.io/repository/maven-public/"
-    }
-    maven {
-        name = "sonatype"
-        url = "https://oss.sonatype.org/content/groups/public/"
-    }
+def initializeWithGitVersion() {
+    def gitVersion = fetchLatestGitVersion()
+    versionProps.setProperty('major', gitVersion[0].toString())
+    versionProps.setProperty('minor', gitVersion[1].toString())
+    versionProps.setProperty('patch', gitVersion[2].toString())
+    println "Initialized version from Git: ${gitVersion[0]}.${gitVersion[1]}.${gitVersion[2]}"
+    return gitVersion
 }
+
+// バージョンプロパティとビルド番号の初期化
+if (versionFile.exists()) {
+    versionFile.withInputStream { versionProps.load(it) }
+} else {
+    def gitVersion = initializeWithGitVersion()
+    versionFile.createNewFile()
+    versionFile.withOutputStream { versionProps.store(it, "Version properties for ${project.name}") }
+}
+
+def buildNumberFile = file('build-number.properties')
+def buildProps = new Properties()
+
+if (buildNumberFile.exists()) {
+    buildNumberFile.withInputStream { buildProps.load(it) }
+} else {
+    buildProps.setProperty('buildNumber', '0')
+    buildNumberFile.createNewFile()
+}
+
+def majorVersion = versionProps.getProperty('major').toInteger()
+def minorVersion = versionProps.getProperty('minor').toInteger()
+def patchVersion = versionProps.getProperty('patch').toInteger()
+def buildNumber = buildProps.getProperty('buildNumber').toInteger()
+
+// バージョン形式
+version = "${majorVersion}.${minorVersion}.${patchVersion}.${buildNumber}"
+
+// Minecraft（MC）バージョンを定義
+def mcVersion = "1.21.3"
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.3-R0.1-SNAPSHOT")
 }
 
-def targetJavaVersion = 21
 java {
-    def javaVersion = JavaVersion.toVersion(targetJavaVersion)
-    sourceCompatibility = javaVersion
-    targetCompatibility = javaVersion
-    if (JavaVersion.current() < javaVersion) {
-        toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
-    }
     withJavadocJar()
     withSourcesJar()
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-
-    if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        options.release.set(targetJavaVersion)
-    }
-}
-
-processResources {
-    def props = [version: version]
-    inputs.properties props
-    filteringCharset 'UTF-8'
-    filesMatching('plugin.yml') {
-        expand props
-    }
 }
 
 publishing {
@@ -214,11 +179,6 @@ tasks.register('buildJar', Jar) {
     dependsOn configurations.compileClasspath
 }
 
-tasks.named('build') {
-    dependsOn 'sourcesJar', 'javadocJar', 'syncVersionWithGit'
-    finalizedBy 'incrementBuildNumber'
-}
-
 tasks.register('incrementBuildNumber') {
     group = 'build'
     description = 'Increment build number after successful build'
@@ -248,108 +208,6 @@ tasks.register('updatePluginVersion') {
     }
 }
 
-tasks.named('updatePluginVersion') {
-    dependsOn 'syncVersionWithGit'
-}
-
-tasks.named('processResources') {
-    dependsOn 'updatePluginVersion'
-}
-
-// Gitブランチとコミットハッシュを取得する関数
-def getGitBranch() {
-    try {
-        def process = "git rev-parse --abbrev-ref HEAD".execute()
-        process.waitFor()
-        if (process.exitValue() == 0) {
-            return process.text.trim()
-        } else {
-            return "unknown"
-        }
-    } catch (Exception e) {
-        return "unknown"
-    }
-}
-
-def getGitCommitHash() {
-    try {
-        def process = "git rev-parse --short HEAD".execute()
-        process.waitFor()
-        if (process.exitValue() == 0) {
-            return process.text.trim()
-        } else {
-            return "unknown"
-        }
-    } catch (Exception e) {
-        return "unknown"
-    }
-}
-
-// サイレントビルドタスク（ビルド番号を上げない）を追加
-tasks.register('silentBuild') {
-    group = 'build'
-    description = 'ビルド番号を上げずにビルドを行う'
-    
-    // タスクの依存関係として明示的にupdatePluginVersionを追加
-    dependsOn 'compileJava', 'processResources', 'classes', 'sourcesJar', 'javadocJar', 'updatePluginVersion'
-    
-    doLast {
-        println "サイレントビルドを実行中..."
-        println "現在のバージョン: ${project.version} (ビルド番号は変更されません)"
-    }
-    
-    finalizedBy 'silentJar', 'verifyJarOutput'
-}
-
-// サイレントビルド用のJarタスク
-tasks.register('silentJar', Jar) {
-    group = 'build'
-    description = 'ビルド番号を上げずにJARファイルを作成する'
-    
-    dependsOn 'updatePluginVersion'
-    
-    doFirst {
-        def gitBranch = getGitBranch()
-        def gitCommit = getGitCommitHash()
-        archiveFileName = "${project.name}-${majorVersion}.${minorVersion}.${patchVersion}.${buildNumber}-${mcVersion}-${gitBranch}-${gitCommit}-silent.jar"
-    }
-    
-    archiveBaseName.set(project.name)
-    from sourceSets.main.output
-    dependsOn configurations.compileClasspath
-    
-    // 確実に出力されるように設定
-    destinationDirectory = file("${buildDir}/libs")
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-}
-
-// jarファイルの出力確認用タスクを追加
-tasks.register('verifyJarOutput') {
-    group = 'verification'
-    description = 'JARファイルが正しく生成されたことを確認する'
-    
-    doLast {
-        def libsDir = file("${buildDir}/libs")
-        def jarFiles = libsDir.listFiles()?.findAll { it.name.endsWith('.jar') } ?: []
-        
-        if (jarFiles.isEmpty()) {
-            throw new GradleException("JARファイルが生成されませんでした。ビルドに失敗しています。")
-        } else {
-            println "生成されたJARファイル:"
-            jarFiles.each { println " - ${it.name} (${it.length()} bytes)" }
-        }
-    }
-}
-
-tasks.named('build') {
-    dependsOn 'sourcesJar', 'javadocJar', 'syncVersionWithGit'
-    finalizedBy 'incrementBuildNumber', 'verifyJarOutput'
-}
-
-tasks.named('processResources') {
-    dependsOn 'updatePluginVersion'
-}
-
 tasks.register('syncVersionWithGit') {
     group = 'build'
     description = 'Synchronize version with GitHub release tags'
@@ -371,75 +229,12 @@ tasks.named('build') {
     finalizedBy 'incrementBuildNumber'
 }
 
-// プラグインディレクトリ作成タスクを追加
-tasks.register('createPluginsDir') {
-    group = 'build'
-    description = 'プラグインディレクトリを作成する'
-    
-    doLast {
-        def pluginsDir = file('run/plugins')
-        if (!pluginsDir.exists()) {
-            pluginsDir.mkdirs()
-            println "'run/plugins' ディレクトリを作成しました"
-        }
-    }
-}
-
-// サイレントJARをプラグインディレクトリにコピーするタスク
-tasks.register('copySilentJar', Copy) {
-    group = 'build'
-    description = 'サイレントビルドしたJARファイルをプラグインディレクトリにコピーする'
-    
-    dependsOn 'silentJar', 'createPluginsDir'
-    
-    doFirst {
-        fileTree(dir: 'run/plugins').matching {
-            include "**/${project.name}-*.jar"
-        }.each { file ->
-            logger.lifecycle("古いJARを削除: ${file.name}")
-            file.delete()
-        }
-    }
-    
-    from silentJar
-    into 'run/plugins'
-    
-    doLast {
-        println "サイレントビルドのJARを 'run/plugins' ディレクトリにコピーしました"
-    }
-}
-
-tasks.named('build').configure {
-    finalizedBy 'verifyJarOutput'
-}
-
-// サイレントビルドとrunServerの連携を設定
-tasks.register('runServer', JavaExec) {
-    group = 'run'
-    description = 'サーバーを起動する（サイレントビルド後）'
-    
-    dependsOn 'silentBuild', 'copySilentJar'
-    
-    doFirst {
-        println "サーバーを起動します..."
-    }
-    
-    mainClass = 'io.papermc.paper.PaperMain'
-    classpath = files('run/paper.jar')
-    
-    workingDir = file('run')
-    standardInput = System.in
-    
-    jvmArgs = ['-Xms2G', '-Xmx2G']
-}
-
-// processResourcesタスクの設定を明示的に行う
 tasks.named('processResources') {
-    mustRunAfter 'updatePluginVersion'
+    dependsOn 'updatePluginVersion'
 }
 
 tasks.named('updatePluginVersion') {
-    mustRunAfter 'incrementBuildNumber'
+    dependsOn 'syncVersionWithGit'
 }
 
 // ビルド失敗時のビルド番号のデクリメント処理を追加
@@ -457,13 +252,6 @@ tasks.register('decrementBuildNumber') {
         } else {
             println "ビルド番号は最小値の1のままです"
         }
-    }
-}
-
-// タスク失敗時のビルド番号デクリメント処理
-gradle.taskGraph.afterTask { task, TaskState state ->
-    if (task.name == 'incrementBuildNumber' && (state.failure || state.skipped)) {
-        tasks.decrementBuildNumber.execute()
     }
 }
 
