@@ -6,47 +6,8 @@ plugins {
 
 group = 'com.karasu256'
 
-def versionFile = file('version.properties')
-def versionProps = new Properties()
-
-// バージョンプロパティとビルド番号の初期化
-if (versionFile.exists()) {
-    versionFile.withInputStream { versionProps.load(it) }
-} else {
-    // 初期バージョンを設定
-    versionProps.setProperty('major', '0')
-    versionProps.setProperty('minor', '0')
-    versionProps.setProperty('patch', '1')
-    versionFile.createNewFile()
-    versionFile.withOutputStream { versionProps.store(it, "Version properties for ${project.name}") }
-}
-
-def buildNumberFile = file('build-number.properties')
-def buildProps = new Properties()
-
-if (buildNumberFile.exists()) {
-    buildNumberFile.withInputStream { buildProps.load(it) }
-} else {
-    buildProps.setProperty('buildNumber', '0')
-    buildNumberFile.createNewFile()
-    buildNumberFile.withOutputStream { buildProps.store(it, "Build Number for ${project.name}") }
-}
-
-def majorVersion = versionProps.getProperty('major').toInteger()
-def minorVersion = versionProps.getProperty('minor').toInteger()
-def patchVersion = versionProps.getProperty('patch').toInteger()
-def buildNumber = buildProps.getProperty('buildNumber').toInteger()
-
-// バージョン形式
-version = "${majorVersion}.${minorVersion}.${patchVersion}.${buildNumber}"
-
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.3-R0.1-SNAPSHOT")
-}
-
-java {
-    withJavadocJar()
-    withSourcesJar()
 }
 
 publishing {
@@ -103,5 +64,4 @@ publishing {
     }
 }
 
-// ルートプロジェクトの共通タスクを適用
 rootProject.ext.createCommonTasks(project)
