@@ -6,6 +6,8 @@ plugins {
 
 group = 'com.karasu256'
 
+rootProject.ext.createCommonTasks(project)
+
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.3-R0.1-SNAPSHOT")
 }
@@ -63,5 +65,3 @@ publishing {
         }
     }
 }
-
-rootProject.ext.createCommonTasks(project)
