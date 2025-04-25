@@ -44,6 +44,9 @@ def buildNumber = buildProps.getProperty('buildNumber').toInteger()
 // バージョン形式の変更
 version = "${majorVersion}.${minorVersion}.${patchVersion}.${buildNumber}"
 
+// Minecraft（MC）バージョンを定義
+def mcVersion = "1.21.3"
+
 def fetchLatestGitVersion() {
     def latestVersion = [0, 0, 1] // デフォルトバージョンを0.0.1に変更
     try {
@@ -245,6 +248,104 @@ tasks.register('updatePluginVersion') {
     }
 }
 
+tasks.named('updatePluginVersion') {
+    dependsOn 'syncVersionWithGit'
+}
+
+tasks.named('processResources') {
+    dependsOn 'updatePluginVersion'
+}
+
+// Gitブランチとコミットハッシュを取得する関数
+def getGitBranch() {
+    try {
+        def process = "git rev-parse --abbrev-ref HEAD".execute()
+        process.waitFor()
+        if (process.exitValue() == 0) {
+            return process.text.trim()
+        } else {
+            return "unknown"
+        }
+    } catch (Exception e) {
+        return "unknown"
+    }
+}
+
+def getGitCommitHash() {
+    try {
+        def process = "git rev-parse --short HEAD".execute()
+        process.waitFor()
+        if (process.exitValue() == 0) {
+            return process.text.trim()
+        } else {
+            return "unknown"
+        }
+    } catch (Exception e) {
+        return "unknown"
+    }
+}
+
+// サイレントビルドタスク（ビルド番号を上げない）を追加
+tasks.register('silentBuild') {
+    group = 'build'
+    description = 'ビルド番号を上げずにビルドを行う'
+    
+    // タスクの依存関係として明示的にupdatePluginVersionを追加
+    dependsOn 'compileJava', 'processResources', 'classes', 'sourcesJar', 'javadocJar', 'updatePluginVersion'
+    
+    doLast {
+        println "サイレントビルドを実行中..."
+        println "現在のバージョン: ${project.version} (ビルド番号は変更されません)"
+    }
+    
+    finalizedBy 'silentJar', 'verifyJarOutput'
+}
+
+// サイレントビルド用のJarタスク
+tasks.register('silentJar', Jar) {
+    group = 'build'
+    description = 'ビルド番号を上げずにJARファイルを作成する'
+    
+    dependsOn 'updatePluginVersion'
+    
+    doFirst {
+        def gitBranch = getGitBranch()
+        def gitCommit = getGitCommitHash()
+        archiveFileName = "${project.name}-${majorVersion}.${minorVersion}.${patchVersion}.${buildNumber}-${mcVersion}-${gitBranch}-${gitCommit}-silent.jar"
+    }
+    
+    archiveBaseName.set(project.name)
+    from sourceSets.main.output
+    dependsOn configurations.compileClasspath
+    
+    // 確実に出力されるように設定
+    destinationDirectory = file("${buildDir}/libs")
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+// jarファイルの出力確認用タスクを追加
+tasks.register('verifyJarOutput') {
+    group = 'verification'
+    description = 'JARファイルが正しく生成されたことを確認する'
+    
+    doLast {
+        def libsDir = file("${buildDir}/libs")
+        def jarFiles = libsDir.listFiles()?.findAll { it.name.endsWith('.jar') } ?: []
+        
+        if (jarFiles.isEmpty()) {
+            throw new GradleException("JARファイルが生成されませんでした。ビルドに失敗しています。")
+        } else {
+            println "生成されたJARファイル:"
+            jarFiles.each { println " - ${it.name} (${it.length()} bytes)" }
+        }
+    }
+}
+
+tasks.named('build') {
+    dependsOn 'sourcesJar', 'javadocJar', 'syncVersionWithGit'
+    finalizedBy 'incrementBuildNumber', 'verifyJarOutput'
+}
+
 tasks.named('processResources') {
     dependsOn 'updatePluginVersion'
 }
@@ -268,4 +369,108 @@ tasks.register('syncVersionWithGit') {
 tasks.named('build') {
     dependsOn 'sourcesJar', 'javadocJar', 'syncVersionWithGit'
     finalizedBy 'incrementBuildNumber'
+}
+
+// プラグインディレクトリ作成タスクを追加
+tasks.register('createPluginsDir') {
+    group = 'build'
+    description = 'プラグインディレクトリを作成する'
+    
+    doLast {
+        def pluginsDir = file('run/plugins')
+        if (!pluginsDir.exists()) {
+            pluginsDir.mkdirs()
+            println "'run/plugins' ディレクトリを作成しました"
+        }
+    }
+}
+
+// サイレントJARをプラグインディレクトリにコピーするタスク
+tasks.register('copySilentJar', Copy) {
+    group = 'build'
+    description = 'サイレントビルドしたJARファイルをプラグインディレクトリにコピーする'
+    
+    dependsOn 'silentJar', 'createPluginsDir'
+    
+    doFirst {
+        fileTree(dir: 'run/plugins').matching {
+            include "**/${project.name}-*.jar"
+        }.each { file ->
+            logger.lifecycle("古いJARを削除: ${file.name}")
+            file.delete()
+        }
+    }
+    
+    from silentJar
+    into 'run/plugins'
+    
+    doLast {
+        println "サイレントビルドのJARを 'run/plugins' ディレクトリにコピーしました"
+    }
+}
+
+tasks.named('build').configure {
+    finalizedBy 'verifyJarOutput'
+}
+
+// サイレントビルドとrunServerの連携を設定
+tasks.register('runServer', JavaExec) {
+    group = 'run'
+    description = 'サーバーを起動する（サイレントビルド後）'
+    
+    dependsOn 'silentBuild', 'copySilentJar'
+    
+    doFirst {
+        println "サーバーを起動します..."
+    }
+    
+    mainClass = 'io.papermc.paper.PaperMain'
+    classpath = files('run/paper.jar')
+    
+    workingDir = file('run')
+    standardInput = System.in
+    
+    jvmArgs = ['-Xms2G', '-Xmx2G']
+}
+
+// processResourcesタスクの設定を明示的に行う
+tasks.named('processResources') {
+    mustRunAfter 'updatePluginVersion'
+}
+
+tasks.named('updatePluginVersion') {
+    mustRunAfter 'incrementBuildNumber'
+}
+
+// ビルド失敗時のビルド番号のデクリメント処理を追加
+tasks.register('decrementBuildNumber') {
+    group = 'build'
+    description = 'ビルドが失敗または中断されたときにビルド番号を戻す'
+    
+    doLast {
+        def currentBuildNumber = buildProps.getProperty('buildNumber').toInteger()
+        if (currentBuildNumber > 1) {
+            def newBuildNumber = currentBuildNumber - 1
+            buildProps.setProperty('buildNumber', newBuildNumber.toString())
+            buildNumberFile.withOutputStream { buildProps.store(it, null) }
+            println "ビルド番号を ${newBuildNumber} に戻しました（ビルド失敗または中断）"
+        } else {
+            println "ビルド番号は最小値の1のままです"
+        }
+    }
+}
+
+// タスク失敗時のビルド番号デクリメント処理
+gradle.taskGraph.afterTask { task, TaskState state ->
+    if (task.name == 'incrementBuildNumber' && (state.failure || state.skipped)) {
+        tasks.decrementBuildNumber.execute()
+    }
+}
+
+gradle.buildFinished { result ->
+    if (!result.failure && gradle.startParameter.taskNames.contains('build')) {
+        if (result.action == 'cancelled' || result.action == 'interrupted') {
+            tasks.decrementBuildNumber.execute()
+        }
+    }
 }
