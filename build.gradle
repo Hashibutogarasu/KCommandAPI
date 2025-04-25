@@ -106,39 +106,5 @@ publishing {
     }
 }
 
-tasks.withType(PublishToMavenRepository) {
-    mustRunAfter tasks.withType(Sign)
-}
-
 // ルートプロジェクトの共通タスクを適用
 rootProject.ext.createCommonTasks(project)
-
-// silentBuildタスクを追加
-tasks.register('silentBuild') {
-    group = 'build'
-    description = 'Build without incrementing the build number or updating version properties'
-    
-    // syncVersionWithGitに依存しないようにする
-    dependsOn 'compileJava', 'processResources', 'classes', 'jar'
-    
-    // silentビルドの場合はupdatePluginVersionがsyncVersionWithGitに依存しないようにする
-    doFirst {
-        println "Running silent build for ${project.name} (version properties will not be updated)"
-    }
-}
-
-tasks.named('build') {
-    dependsOn 'sourcesJar', 'javadocJar', 'syncVersionWithGit'
-    finalizedBy 'incrementBuildNumber'
-}
-
-tasks.named('processResources') {
-    dependsOn 'updatePluginVersion'
-}
-
-// silentビルド時にはsyncVersionWithGitに依存しないよう条件分岐
-tasks.named('updatePluginVersion') {
-    if (!gradle.startParameter.taskNames.contains('silentBuild')) {
-        dependsOn 'syncVersionWithGit'
-    }
-}
